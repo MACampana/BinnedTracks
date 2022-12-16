@@ -82,7 +82,7 @@ def angular_distance(lon1,lat1,lon2,lat2):
         s1*s2+c1*c2*cd
         )
 
-def i3f2npy(path, assign_time, fix_leap=True, MC=False)#, nfiles=None, neventsperfile=None):
+def i3f2npy(path, assign_time, fix_leap=True, MC=False):#, nfiles=None, neventsperfile=None):
     r""" Read events from i3file and return numpy array
 
     Parameters
@@ -173,6 +173,7 @@ def i3f2npy(path, assign_time, fix_leap=True, MC=False)#, nfiles=None, neventspe
     a['time'] = time
     a['logE'] = logE
     a['ra'], a['dec'] = astro.dir_to_equa(a['zen'], a['azi'], a['time'])
+    a['angErr'] = angErr
 
     if MC:
         # MC fields
@@ -192,8 +193,10 @@ def i3f2npy(path, assign_time, fix_leap=True, MC=False)#, nfiles=None, neventspe
 
 # END i3f2npy()
 
-def hdf2npy(path, assign_time, fix_leap=True, MC=False, ow_file=None)#, nfiles=None, neventsperfile=None):
+def hdf2npy(path, assign_time, fix_leap=True, MC=False):#, nfiles=None, neventsperfile=None):
     r""" Read events from hdf5 and return numpy array
+    
+    !! NOT TESTED !!
 
     Parameters
     ----------
@@ -216,7 +219,7 @@ def hdf2npy(path, assign_time, fix_leap=True, MC=False, ow_file=None)#, nfiles=N
     subevent = hdf['I3EventHeader']['SubEvent']
 
     zen = hdf['MPEFit']['zenith']
-    azi = frame['MPEFit']['azimuth']
+    azi = hdf['MPEFit']['azimuth']
     if assign_time is None:
         time = hdf['I3EventHeader']['time_start_mjd']
         if fix_leap:
@@ -232,6 +235,8 @@ def hdf2npy(path, assign_time, fix_leap=True, MC=False, ow_file=None)#, nfiles=N
         trueZen = hdf['I3MCWeightDict']['PrimaryNeutrinoZenith']
         trueAzi = hdf['I3MCWeightDict']['PrimaryNeutrinoAzimuth']
         trueE = hdf['I3MCWeightDict']['PrimaryNeutrinoEnergy']
+        
+        #oneweight = hdf['SimWeights']['OneWeight']
             
     # END for (frame)
     print("Found {} p frames".format(len(run)))
@@ -239,12 +244,12 @@ def hdf2npy(path, assign_time, fix_leap=True, MC=False, ow_file=None)#, nfiles=N
     if not MC:
         dtype = exp_dtype
     else:
-        dtype = exp_dtype + mc_dtype
+        dtype = exp_dtype + mc_dtype + [('oneweight', float)]
     a = np.empty(len(run), dtype)
 
     # return empty array if path is empty
     if a.size == 0:
-        i3f.close()
+        hdf.close()
         return a
 
     a['run'] = run
@@ -255,6 +260,7 @@ def hdf2npy(path, assign_time, fix_leap=True, MC=False, ow_file=None)#, nfiles=N
     a['time'] = time
     a['logE'] = logE
     a['ra'], a['dec'] = astro.dir_to_equa(a['zen'], a['azi'], a['time'])
+    a['angErr'] = angErr
 
     if MC:
         # MC fields
@@ -265,11 +271,11 @@ def hdf2npy(path, assign_time, fix_leap=True, MC=False, ow_file=None)#, nfiles=N
         a['true_ra'], a['true_dec'] = astro.dir_to_equa(
             a['true_zen'], a['true_azi'], a['time'])
 
-        #a['oneweight'] = ow(oneweight, nfiles, neventsperfile)
+        #a['oneweight'] = oneweight
         
         a['true_angErr'] = angular_distance(a['true_ra'], a['true_dec'], a['ra'], a['dec'])
-
-    i3f.close()
+        
+    hdf.close()
     return a
 
 def mask_exp(data):
@@ -304,7 +310,7 @@ def mask_mc(mc):
     mask = (mc['logE'] > 0) 
     return mc[mask]
 
-def proc(f, time, fix_leap=True, MC=False, hdf=False)#, nfiles=None, neventsperfile=None):
+def proc(f, time, fix_leap=True, MC=False, hdf=False):#, nfiles=None, neventsperfile=None):
     r""" Perform i3 -> npy
 
     Parameters
@@ -357,15 +363,15 @@ p.add_argument("--output", type=str, required=True, help="Output numpy file")
 p.add_argument("--fix-leap", action='store_true', dest="fix_leap",
                help="Apply leap second bug fix")
 p.add_argument("--hdf", action='store_true', dest="hdf",
-               help="HDF5 --> npy instead of i3 --> npy")
+               help="HDF5 --> npy instead of i3 --> npy (NOT TESTED)")
 
 #For Monte Carlo only...
 p.add_argument("--MC", action='store_true', dest="MC",
                help="Is Monte Carlo?")
 p.add_argument("--time", type=float, default=None,
                help="Time to assign to events (MC only)")
-p.add_argument("--ow-file", type=str, default=None, 
-               help="File with saved oneweights (MC only)")
+#p.add_argument("--ow-file", type=str, default=None, 
+#               help="File with saved oneweights (MC only)")
 #p.add_argument("--nfiles", type=float, default=None,
 #               help="Num MC files (MC only)")
 #p.add_argument("--neventsperfile", type=float, default=None,
@@ -375,6 +381,8 @@ args = p.parse_args()
 
 if args.output[-4:] != ".npy":
     raise ValueError("Output file path must end with .npy")
+if args.hdf:
+    print('Warning: HDF to Numpy array has not been tested and may not work as expected.')
 
 ########
 # ARGS #
