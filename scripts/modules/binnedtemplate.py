@@ -97,9 +97,11 @@ class LiMaStats_bothAcc:
         self.cutoff = cutoff
         self.nside = nside
         self.num_bands = num_bands
+        self.min_dec_deg = min_dec_deg
+        self.max_dec_deg = max_dec_deg
         
         self.sindec_bandedges = np.linspace(np.sin(np.radians(min_dec_deg)), np.sin(np.radians(max_dec_deg)), num_bands+1)
-        self.band_width = 2. * np.sin(np.radians(85.)) / num_bands
+        self.band_width = (np.sin(np.radians(max_dec_deg)) - np.sin(np.radians(min_dec_deg))) / num_bands
         
         self.bin_thetas, self.bin_phis = hp.pix2ang(self.nside, np.arange(hp.nside2npix(self.nside))) 
         self.bin_ras = self.bin_phis
@@ -366,7 +368,7 @@ class LiMaStats_bothAcc:
         #Make acceptance spline
         self.create_signal_acc_spline()
         #Apply spline
-        template_acc = self.template * np.exp(self.signal_acc_spline.ev(self.gamma, np.sin(self.bin_decs))) 
+        template_acc = self.template * self.get_acc_from_spline(np.sin(self.bin_decs)) 
       
         template = self.template.copy()
 
@@ -381,7 +383,7 @@ class LiMaStats_bothAcc:
             #Reset nonsensical values 
             temp_pdf[mask] = 0
             temp_pdf[temp_pdf < 1e-12] = 1e-12
-            dec_mask = (self.bin_decs<np.radians(85)) & (self.bin_decs>np.radians(-85))
+            dec_mask = (self.bin_decs<np.radians(self.max_dec_deg)) & (self.bin_decs>np.radians(self.min_dec_deg))
             #Re-normalize
             temp_pdf = temp_pdf / ( np.sum(temp_pdf[dec_mask]) * hp.nside2pixarea(self.nside) )
             
@@ -727,7 +729,7 @@ class LiMaStats_bothAcc:
         for dec in unique_decs:
             mask = (self.bin_decs == dec)
             crange = np.arange(0, np.max(self.binned_data[mask])+1, 1)
-            weights = np.clip(self.bin_count_spline.ev(crange, dec), a_min=1e-12, a_max=None)
+            weights = np.clip(self.bin_count_spline.ev(crange, np.sin(dec)), a_min=1e-12, a_max=None)
             counts[mask] = rng_scramble.choice(crange, size=np.sum(mask), p=weights/np.sum(weights))
             
         return counts
@@ -858,9 +860,11 @@ class LiMaStats_combAcc:
         self.cutoff = cutoff
         self.nside = nside
         self.num_bands = num_bands
+        self.min_dec_deg = min_dec_deg
+        self.max_dec_deg = max_dec_deg
         
         self.sindec_bandedges = np.linspace(np.sin(np.radians(min_dec_deg)), np.sin(np.radians(max_dec_deg)), num_bands+1)
-        self.band_width = 2. * np.sin(np.radians(85.)) / num_bands
+        self.band_width = (np.sin(np.radians(max_dec_deg)) - np.sin(np.radians(min_dec_deg))) / num_bands
         
         self.bin_thetas, self.bin_phis = hp.pix2ang(self.nside, np.arange(hp.nside2npix(self.nside))) 
         self.bin_ras = self.bin_phis
@@ -1127,7 +1131,7 @@ class LiMaStats_combAcc:
         #Make acceptance spline
         self.create_signal_acc_spline()
         #Apply spline
-        template_acc = self.template * np.exp(self.signal_acc_spline.ev(self.gamma, np.sin(self.bin_decs))) 
+        template_acc = self.template * self.get_acc_from_spline(np.sin(self.bin_decs))
       
         template = self.template.copy()
 
@@ -1142,7 +1146,7 @@ class LiMaStats_combAcc:
             #Reset nonsensical values 
             temp_pdf[mask] = 0
             temp_pdf[temp_pdf < 1e-12] = 1e-12
-            dec_mask = (self.bin_decs<np.radians(85)) & (self.bin_decs>np.radians(-85))
+            dec_mask = (self.bin_decs<np.radians(self.max_dec_deg)) & (self.bin_decs>np.radians(self.min_dec_deg))
             #Re-normalize
             temp_pdf = temp_pdf / ( np.sum(temp_pdf[dec_mask]) * hp.nside2pixarea(self.nside) )
             
@@ -1489,7 +1493,7 @@ class LiMaStats_combAcc:
         for dec in unique_decs:
             mask = (self.bin_decs == dec)
             crange = np.arange(0, np.max(self.binned_data[mask])+1, 1)
-            weights = np.clip(self.bin_count_spline.ev(crange, dec), a_min=1e-12, a_max=None)
+            weights = np.clip(self.bin_count_spline.ev(crange, np.sin(dec)), a_min=1e-12, a_max=None)
             counts[mask] = rng_scramble.choice(crange, size=np.sum(mask), p=weights/np.sum(weights))
             
         return counts
@@ -1620,9 +1624,11 @@ class LiMaStats_tempAcc:
         self.cutoff = cutoff
         self.nside = nside
         self.num_bands = num_bands
+        self.min_dec_deg = min_dec_deg
+        self.max_dec_deg = max_dec_deg
         
         self.sindec_bandedges = np.linspace(np.sin(np.radians(min_dec_deg)), np.sin(np.radians(max_dec_deg)), num_bands+1)
-        self.band_width = 2. * np.sin(np.radians(85.)) / num_bands
+        self.band_width = (np.sin(np.radians(max_dec_deg)) - np.sin(np.radians(min_dec_deg))) / num_bands
         
         self.bin_thetas, self.bin_phis = hp.pix2ang(self.nside, np.arange(hp.nside2npix(self.nside))) 
         self.bin_ras = self.bin_phis
@@ -1889,7 +1895,7 @@ class LiMaStats_tempAcc:
         #Make acceptance spline
         self.create_signal_acc_spline()
         #Apply spline
-        template_acc = self.template * np.exp(self.signal_acc_spline.ev(self.gamma, np.sin(self.bin_decs))) 
+        template_acc = self.template * self.get_acc_from_spline(np.sin(self.bin_decs))
       
         template = self.template.copy()
 
@@ -1904,7 +1910,7 @@ class LiMaStats_tempAcc:
             #Reset nonsensical values 
             temp_pdf[mask] = 0
             temp_pdf[temp_pdf < 1e-12] = 1e-12
-            dec_mask = (self.bin_decs<np.radians(85)) & (self.bin_decs>np.radians(-85))
+            dec_mask = (self.bin_decs<np.radians(self.max_dec_deg)) & (self.bin_decs>np.radians(self.min_dec_deg))
             #Re-normalize
             temp_pdf = temp_pdf / ( np.sum(temp_pdf[dec_mask]) * hp.nside2pixarea(self.nside) )
             
@@ -1916,7 +1922,7 @@ class LiMaStats_tempAcc:
         #This, self.template_pdf, is what gets used in defining N_on and N_off.
         #The above, self.template_acc_smoothed, will always be used for injections. 
         self.template_pdf = self.template_acc_smoothed
-
+        
         print('--> Template PDF Done. \n')
         
         return
@@ -2029,7 +2035,6 @@ class LiMaStats_tempAcc:
         
         llrs = np.array(list(sindec_llrs.values()))
         accs = np.array(list(sindec_accs.values()))
-        #allsky_llr = np.sum(accs * llrs)            #Weighted sum of log(LHR)s 
         allsky_llr = np.sum(llrs)                   #Without acceptance weighting
         
         sindec_llrs = {'sindec': sindec_llrs}
@@ -2251,7 +2256,7 @@ class LiMaStats_tempAcc:
         for dec in unique_decs:
             mask = (self.bin_decs == dec)
             crange = np.arange(0, np.max(self.binned_data[mask])+1, 1)
-            weights = np.clip(self.bin_count_spline.ev(crange, dec), a_min=1e-12, a_max=None)
+            weights = np.clip(self.bin_count_spline.ev(crange, np.sin(dec)), a_min=1e-12, a_max=None)
             counts[mask] = rng_scramble.choice(crange, size=np.sum(mask), p=weights/np.sum(weights))
             
         return counts
@@ -2291,4 +2296,4 @@ class LiMaStats_tempAcc:
         self.counts[bin_nums] += bin_injs
                 
         return          
-        
+
