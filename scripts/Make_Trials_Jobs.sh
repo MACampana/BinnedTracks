@@ -35,18 +35,19 @@ max_dec_deg="80"
 num_trials="100"
 acc="signal"
 
-where_accs=("bothAcc" "tempAcc" "combAcc")
+where_accs=("combAcc")
+#("bothAcc" "tempAcc" "combAcc")
 for where_acc in ${where_accs[@]}; do
 
     name="Fermi_pi0_${where_acc}"
     
     if [[ ${where_acc} == "combAcc" ]]; then
-        cutoff="0.0631"
+        cutoff="0.1"
     else
         cutoff="0.1"
     fi
     
-    nsigs=( 0 250000 500000 750000 )
+    nsigs=( 0 50000 100000 150000 )
     for nsig in ${nsigs[@]}; do
     
         seeds=({0..99..1})
@@ -60,12 +61,12 @@ for where_acc in ${where_accs[@]}; do
             #These arguments will work, but you may want/need to change them for your own purposes...
 
             if [[ ${nsig} == "0" ]]; then
-                save_trials_dir="${base_dir}/trials/bkg/${where_acc}"
+                save_trials_dir="${base_dir}/trials/bkg/${where_acc}/cutoff/${cutoff}"
             else
-                save_trials_dir="${base_dir}/trials/sig/${where_acc}/nsig/${nsig}"
+                save_trials_dir="${base_dir}/trials/sig/${where_acc}/cutoff/${cutoff}/nsig/${nsig}"
             fi
 
-            echo "python ${base_dir}/scripts/trials_${where_acc}.py --data-path ${data_path} --is-binned --sig-path ${sig_path} --grl-path ${grl_path} --savedir ${savedir} --name ${name} --template-path ${template_path} --gamma ${gamma} --cutoff ${cutoff} --nside ${nside} --num-bands ${num_bands} --min-dec-deg ${min_dec_deg} --max-dec-deg ${max_dec_deg} --verbose --num-trials ${num_trials} --nsig ${nsig} --acc ${acc} --seed ${s} --save-trials ${save_trials_dir}" >> ${exec_path}
+            echo "python ${base_dir}/scripts/trials.py --data-path ${data_path} --is-binned --sig-path ${sig_path} --grl-path ${grl_path} --savedir ${savedir} --name ${name} --template-path ${template_path} --gamma ${gamma} --cutoff ${cutoff} --nside ${nside} --num-bands ${num_bands} --min-dec-deg ${min_dec_deg} --max-dec-deg ${max_dec_deg} --verbose --num-trials ${num_trials} --nsig ${nsig} --acc ${acc} --seed ${s} --save-trials ${save_trials_dir} --where-acc ${where_acc::4}" >> ${exec_path}
 
             #Create submission job file with generic parameters and 8GB of RAM requested
             sub_path="${scratch_dir}/job_files/subs/BinnedTrials_${where_acc}_${nsig}_${s}_submit.submit"
