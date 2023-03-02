@@ -1,5 +1,7 @@
+#Imports
 import numpy as np
 import scipy as sp
+import iminuit
 import healpy as hp
 import histlite as hl
 import csky as cy
@@ -7,17 +9,20 @@ import os
 import gc
 from glob import glob
 
-class LiMaStats_allsky:
-    """For conducting binned calculations using Li, Ma (1983) statistical methods. 
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+   
+class BinnedTemplateAllSky:
+    """For conducting binned calculations using maximum likelihood statistical methods. 
     For binned sky map of IceCube event data. No separation of likelihood across declinations.
     
     
     """
-    def __init__(self, data, sig, grl, is_binned=False, savedir=None, name='LiMaBinnedTemplateAnalysis', 
+    def __init__(self, data, sig, grl, is_binned=False, savedir=None, name='AllSkyBinnedTemplateAnalysis', 
                  template=None, gamma=2.7, cutoff=None, 
                  nside=128, min_dec_deg=-80, max_dec_deg=80, 
                  verbose=False):
-        """LiMaStats constructor
+        """BinnedTemplateAllSky constructor
         
         Args:
             data: Path to numpy array(s) (directory or single file) containing  dtype=[('run', '<i8'), 
@@ -154,6 +159,8 @@ class LiMaStats_allsky:
         assert self.template.shape == self.template_pdf.shape, 'Template and template PDF shapes do not match...hmmm'
         assert len(self.template) == hp.nside2npix(self.nside), 'Number of bins in template does not match provided nside?!'
         assert len(self.template) == len(self.binned_data), 'Number of bins in template does not match number of bins in binned data!'
+        
+        self.get_pdfs()
 
         print('***Setup complete!*** \n')
         
@@ -256,11 +263,38 @@ class LiMaStats_allsky:
         Returns: histlite spline object
         
         """
-                
-        h_counts = hl.hist(np.sin(self.bin_decs), weights=self.binned_data)
-        h = h_counts.normalize(density=True) / (2*np.pi)
-        hrange = h.range[0]
         
+        #BG pdf using only "off" pixels as defined by cutoff and within dec bounds
+        #dec_mask = (self.bin_decs <= np.radians(self.max_dec_deg)) & (self.bin_decs >= np.radians(self.min_dec_deg))
+        mask = (self.template_pdf <= self.cutoff)
+
+        sindec_bins = np.unique(np.concatenate([
+                             np.linspace(-1, -0.93, 4 + 1),
+                             np.linspace(-0.93, -0.3, 10 + 1),
+                             np.linspace(-0.3, 0.05, 9 + 1),
+                             np.linspace(0.05, 1, 18 + 1) ]) )
+
+        h_counts_nocorr = hl.hist(np.sin(self.bin_decs[mask]), weights=self.binned_data[mask], bins=sindec_bins)
+
+        #binds = np.digitize(np.sin(self.bin_decs), sindec_bins)
+        #bs = np.array([np.sum(mask & (binds==ind)) for ind in range(1, len(sindec_bins))])
+        
+        bin_edges = np.arcsin(sindec_bins)
+        dOmega_corr = []
+        for i in np.arange(len(bin_edges)-1):
+            pixels_in_band = hp.query_strip(self.nside, np.pi/2-bin_edges[i+1], np.pi/2-bin_edges[i])
+            bool_array = np.isin(pixels_in_band, np.arange(hp.nside2npix(self.nside))[~mask])
+            number_true = np.count_nonzero(bool_array)
+            corr = float(len(pixels_in_band)/float((len(pixels_in_band)-number_true)))
+            dOmega_corr.append(corr)
+        
+        counts_corr = h_counts_nocorr.values * np.array(dOmega_corr)
+        
+        h_counts = hl.Hist(values=counts_corr, bins=sindec_bins)
+        
+        h = h_counts.normalize(density=True) / (2*np.pi)
+
+        skw = {}
         skw.setdefault('s', 0)
         skw.setdefault('k', 2)
         skw.setdefault('log', True)
@@ -316,7 +350,7 @@ class LiMaStats_allsky:
         Args:
             sindec: Sine of declination(s)
             
-            acc: One of "signal" or "bg" for which acceptance spline to use. (Default: 'template')
+            acc: One of "signal" or "bg" for which acceptance spline to use. (Default: 'signal')
             
         Returns: acceptance(s) for provided sin(Dec).
         
@@ -332,7 +366,7 @@ class LiMaStats_allsky:
                 
             return out
                 
-        elif acc == 'bg': #This is probably not going to be used
+        elif acc == 'bg':
             try:
                 out = np.exp(self.bg_acc_spline(sindec))
             except AttributeError:
@@ -358,7 +392,7 @@ class LiMaStats_allsky:
         #Make acceptance spline
         self.create_signal_acc_spline()
         #Apply spline
-        template_acc = self.template * self.get_acc_from_spline(np.sin(self.bin_decs)) 
+        template_acc = self.template * self.get_acc_from_spline(np.sin(self.bin_decs), acc='signal') 
       
         template = self.template.copy()
 
@@ -373,7 +407,7 @@ class LiMaStats_allsky:
             #Reset nonsensical values 
             temp_pdf[mask] = 0
             temp_pdf[temp_pdf < 1e-12] = 1e-12
-            dec_mask = (self.bin_decs<np.radians(self.max_dec_deg)) & (self.bin_decs>np.radians(self.min_dec_deg))
+            dec_mask = (self.bin_decs<=np.radians(self.max_dec_deg)) & (self.bin_decs>=np.radians(self.min_dec_deg))
             #Re-normalize
             temp_pdf = temp_pdf / ( np.sum(temp_pdf[dec_mask]) * hp.nside2pixarea(self.nside) )
             
@@ -390,105 +424,78 @@ class LiMaStats_allsky:
         
         return
 
-    def template_counter(self):
+    def multinomial_TS(self, n_sig, n, p_s, p_b):
         """
-        Gets on and off counts and alpha by performing (weighted) sum of bin counts across sky. 
-        On bins are defined as having template weights greater than or equal to the cutoff.
-        OLD: Alpha is the ratio of number of on bins to off bins, since each bin has the same area.
-        NEW: Alpha is the ratio of the sum of on template values to off template values.
-            
-        *Note*: Data may not have been re-binned after injections! 
-            
-        Returns: alpha, number of On counts, number of Off counts
-        """
+        This function is used to calculate the multinomial TS:
+        TS = 2 \sum_i n_i \ln\left( \frac{n_s}{N}\left(\frac{s_i}{b_i} - 1\right) + 1 \right)
         
-        dec_mask = (self.bin_decs<np.radians(self.max_dec_deg)) & (self.bin_decs>np.radians(self.min_dec_deg))
-            
-        template_dec = self.template_pdf[dec_mask]
-        binned_data_dec = self.counts[dec_mask]
-        
-        assert template_dec.shape == binned_data_dec.shape
-        
-        mask_cutoff = (template_dec > self.cutoff)
-        
-        N_on = np.sum(np.multiply(template_dec[mask_cutoff] , binned_data_dec[mask_cutoff]))
-        N_off = np.sum(binned_data_dec[~mask_cutoff])                                  
-
-        alpha = np.sum(template_dec[mask_cutoff]) / np.sum(~mask_cutoff)                  #Weighted to unweighted ratio
-        
-        return alpha, N_on, N_off
-    
-    def log_likelihood_ratio(self, verbose=None):
-        """
-        Calculation of LOG likelihood ratio for the sky.
+        It is minimized for n_sig in the fitting functions.
         
         Args:
+            n_sig: number of (signal) events
             
-            verbose: True to show more output (Defaults to class's initited value)
+            n: array of event counts in pixels (via healpy)
             
-        *Note*: Data may not have been re-binned after injections! 
+            p_s: array of pixel-wise signal probabilities using signal/template PDf
             
-        Returns: LOG likelihood ratio (float)
+            p_b: array of pixel-wise background probabilities using background PDF
+            
+        Returns: TS as calculated in the above equation.
+        
+        """
+                
+        TS = 2.0 * np.sum( n * np.log( (n_sig / np.sum(n)) * (p_s / p_b - 1.0) + 1.0 ) )
+        
+        return TS
+    
+    def get_pdfs(self, verbose=None):
+        """
+        Creates signal and background pdfs used in the test statistic calculation/minimization.
+        
+        `p_s` is the signal PDF; i.e., the template_pdf with pixels that do not pass the cutoff set to 0 and renormalized within dec bounds
+        
+        `p_b` is the background PDF; i.e., using the bg spline of 'off' bin counts and renormalized within dec bounds
+        
         
         """
         if verbose is None:
             verbose = self.verbose
         
-        alpha, N_on, N_off = self.template_counter()
+        if verbose:
+            print('Creating signal and background PDFs for TS calculations...')
+        
+        mask = (self.template_pdf > self.cutoff)
+        dec_mask = (self.bin_decs<=np.radians(self.max_dec_deg)) & (self.bin_decs>=np.radians(self.min_dec_deg))
+        
+        p_s = self.template_pdf.copy()
+        
+        #Any pixels that do not pass the cutoff are set to 0 signal probability
+        p_s[~mask] = 0.0
+        p_s /= np.sum(p_s[dec_mask]) * hp.nside2pixarea(self.nside)
+        
+        p_b = self.get_acc_from_spline(np.sin(self.bin_decs), acc='bg')
+        p_b /= np.sum(p_b[dec_mask]) * hp.nside2pixarea(self.nside)
+        
+        #ReNormalize (is this right?)  
+        sum_p = np.sum(p_s[dec_mask] + p_b[dec_mask])
+        p_s /= sum_p
+        p_b /= sum_p
+        
+        self.p_s = p_s
+        self.p_b = p_b
         
         if verbose:
-            print(f'    alpha = {alpha}')
-            print(f'    N_on  = {N_on}')
-            print(f'    N_off = {N_off}')
-        
-        if alpha == 0.0:
-            llr = 1.0
-        elif alpha == np.inf:
-            llr = 0.0
-        else:
-            first_term = np.log( (alpha / (1+alpha)) * ((N_on + N_off) / N_on) ) * N_on
-            second_term = np.log( (1 / (1+alpha)) * ((N_on + N_off) / N_off) ) * N_off
-
-            llr = first_term + second_term
-
-        if verbose:
-            print(f' * Log Likelihood Ratio: {llr}')
-            print(' ')
-
-        return llr
-        
-    def allsky_llr(self, verbose=None):
-        """
-        Essentially a wrapper to get likelihood ratio using self.log_likelihood_ratio.
-        
-        Args:
+            print('--> PDFs Done.')
             
-            verbose: True to show more output (Defaults to class's initited value)
-        
-        *Note*: Data may not have been re-binned after injections! 
-        
-        Returns: the all-sky likelihood ratio (lambda in Li, Ma (1983))
-            
-        """
-        if verbose is None:
-            verbose = self.verbose
-        
-        if verbose:
-            print(f'==== Getting all-sky likelihood ratio for nside={self.nside} ====')
-                           
-        allsky_llr = self.log_likelihood_ratio(verbose=verbose)
-        
-        return allsky_llr
+        return
     
-    def get_one_llr(self, n_sig=0, acc='signal', truth=False, seed=None, verbose=None):
+    def get_one_fit(self, n_sig=0, truth=False, seed=None, verbose=None):
         """
         Obtains a single all-sky likelihood ratio.
         
         Args:
             n_sig: number of (signal) events to inject (Default: 0). Only used if truth=False
-            
-            acc: One of "signal" or "bg" for which acceptance spline to use. (Default: 'signal')
-        
+                    
             truth: Whether to use true event locations (True), or scramble in right ascension (False)
         
             seed: integer, Seed for numpy.random.default_rng() used to scramble events and pick injection locations
@@ -504,86 +511,79 @@ class LiMaStats_allsky:
         
         if truth:
             self.counts = self.binned_data.copy()
-            allsky_llr = self.allsky_llr(verbose=verbose)
+
         else:
-            self.counts = self.scrambler(seed=seed)
-            if n_sig == 0:
-                allsky_llr = self.allsky_llr(verbose=verbose)
-            else:
+            self.counts = self.scrambler(seed=seed)                
+            if n_sig != 0:
                 self.template_injector(n_sig=n_sig, seed=seed)
-                allsky_llr = self.allsky_llr(verbose=verbose)
                 
-        result = {'allsky_llr': allsky_llr}
+        dec_mask = (self.bin_decs<=np.radians(self.max_dec_deg)) & (self.bin_decs>=np.radians(self.min_dec_deg))
+
+        n = self.counts[dec_mask].copy()
+        p_s = self.p_s[dec_mask].copy()
+        p_b = self.p_b[dec_mask].copy()
+        
+        #Then, minimize...
+        def min_neg_TS(ns):
+            return -1.0 * self.multinomial_TS(ns, n, p_s, p_b)
         
         if verbose:
-            print(' --> One All Sky LLR Done.')
+            print('Minimizing -TS...')
+        res = iminuit.minimize(min_neg_TS, 1, bounds=[(0,np.sum(n))])
+        #res = sp.optimize.minimize(min_neg_TS, 1, bounds=[(0,np.sum(n))])
+        
+        fit_ns = res.x
+        fit_TS = -1.0 * res.minuit.fval
+        #fit_TS = -1.0 * res.fun
+        
+        result = np.array([(seed, fit_ns, fit_TS)], dtype=[('seed', int),('ns', float),('ts', float)])
+        
+        if verbose:
+            print(f' --> One All Sky Fit Done: ns={fit_ns}, TS={fit_TS}')
+            
+        print(res)
         return result
     
-    def get_many_llrs(self, num, n_sig=0, acc='signal', seed=None, verbose=None):
+    def get_many_fits(self, num, n_sig=0, seed=None, verbose=None):
         """
-        Obtains multiple likelihood ratios
+        Obtains multiple best-fit ns and TS.
         
         Args:
             num: integer, number of llrs to compute
             
             n_sig: number of (signal) events to inject (Default: 0)
-                        
-            acc: One of "signal" or "bg" for which acceptance spline to use. (Default: 'signal')
-            
+                                    
             seed: integer, seed used to create multiple new seeds for scrambles (Default: None, unpredictable)
             
             verbose: True to show more output (Defaults to class's initited value)
             
-        Returns: dictionary with {'n_sig': n_sig, 'seed': {new_seed: allsky_llr} }
+        Returns: dictionary with {'n_sig': n_sig, 'results': structured array of (seed, ns, ts) }
         
         """
-        print(f'Calculating {num} log likelihood ratio(s) with {n_sig} injected event(s)...')
+        print(f'Calculating {num} TS with {n_sig} injected event(s)...')
         if verbose is None:
             verbose = self.verbose
             
-        llrs = {}
+        results = np.array([],dtype=[('seed', int),('ns', float),('ts', float)])
         
         num = int(num)
         if num < 1:
             raise ValueError(f'num must be a positive integer, got: {num}')
         elif num == 1:
-            llrs[seed] = self.get_one_llr(n_sig=n_sig, seed=seed, acc=acc, verbose=verbose)['allsky_llr']
+            results = np.append(results, self.get_one_fit(n_sig=n_sig, seed=seed, acc=acc, verbose=verbose))
         else:
             rng_seed = np.random.default_rng(seed)
             for i in range(1, num+1):
                 new_seed = rng_seed.integers(int(1e9))
 
-                llrs[new_seed] = self.get_one_llr(n_sig=n_sig, seed=new_seed, acc=acc, verbose=verbose)['allsky_llr']
+                results = np.append(results, self.get_one_fit(n_sig=n_sig, seed=new_seed, verbose=verbose))
                     
-        llrs = {'n_sig': n_sig, 'seed': llrs}
-        print(f'--> {num} All Sky LLRs Done!')
-        return llrs        
+        res_dict = {'n_inj': n_sig, 'results': results}
         
-    def get_TS_from_llr(self, llr):
-        """
-        Simple conversion to TS from a given (array of) log likelihood ratio(s).
+        print(f'--> {num} Fits Done!')
         
-        Args:
-            llr: float or array of floats, likelihood ratio to be converted to TS
-        
-        Returns: float or array of floats, TS
-            
-        """
-        try:
-            ts = -2.0 * llr
-        except TypeError:
-            try:
-                llrs = np.array(list(llr['seed'].values()))
-            except KeyError:
-                try:
-                    llrs = np.array(list(llr.values()))
-                except:
-                    raise NotImplementedError("The type of the llr argument provided is not supported.")
-            
-            ts = -2.0 * llrs
-        
-        return ts
-    
+        return res_dict        
+         
     def fit_TS_chi2(self, tss):
         """
         Fit distribution of TSs > 0 with a chi-squared funtion.
@@ -660,8 +660,17 @@ class LiMaStats_allsky:
         Creates a 2d spline of bin counts vs bin sin(dec) for use in creating scrambles with self.scrambler
         
         """
-        bs = [-np.pi/2] + list(np.unique(self.bin_decs)[:-1] + .5*np.diff(np.unique(self.bin_decs))) + [np.pi/2]
-        h = hl.hist((self.binned_data, np.sin(self.bin_decs)), bins = (np.arange(0,np.max(self.binned_data)+1), np.sin(bs)))
+        #Use only "off" pixels for generating "scrambled" pixels
+        mask = (self.template_pdf <= self.cutoff)
+        
+        sindec_bins = np.unique(np.concatenate([
+                     np.linspace(-1, -0.93, 4 + 1),
+                     np.linspace(-0.93, -0.3, 10 + 1),
+                     np.linspace(-0.3, 0.05, 9 + 1),
+                     np.linspace(0.05, 1, 18 + 1) ]) )
+        count_bins = np.linspace(0, np.quantile(self.binned_data, 0.99), 100)
+        h = hl.hist((self.binned_data[mask], np.sin(self.bin_decs[mask])), 
+                    bins = (count_bins, sindec_bins))
 
         skw = {}
         skw.setdefault('s', 0)
@@ -673,7 +682,7 @@ class LiMaStats_allsky:
         
         return
     
-    def scrambler(self, seed=None):
+    def scrambler(self, seed=None, verbose=None):
         """
         Gets a map of "scrambled" counts by sampling from self.bin_count_spline with given sindec
         
@@ -682,6 +691,12 @@ class LiMaStats_allsky:
                   (Default: None, meaning unpredictable)
         
         """
+        if verbose is None:
+            verbose = self.verbose
+        
+        if verbose:
+            print(f'Creating random scramble with seed {seed}...')
+            
         if not hasattr(self, 'bin_count_spline'):
             self.create_bin_count_spline()
         
@@ -691,12 +706,17 @@ class LiMaStats_allsky:
         counts = np.zeros_like(self.binned_data)
         for dec in unique_decs:
             mask = (self.bin_decs == dec)
-            crange = np.arange(0, np.max(self.binned_data[mask])+1, 1)
+            crange = np.arange(np.quantile(self.binned_data[mask], 0.1), np.quantile(self.binned_data[mask], 0.9)+1, 1)
             weights = np.clip(self.bin_count_spline.ev(crange, np.sin(dec)), a_min=1e-12, a_max=None)
             counts[mask] = rng_scramble.choice(crange, size=np.sum(mask), p=weights/np.sum(weights))
             
-        return counts
+        #Adjust so sum(counts) ~= sum(binned_data)
+        counts = np.around(counts * np.sum(self.binned_data) / np.sum(counts))
+        
+        if verbose:
+            print(f'--> Scrambling Done. Scramble contains {np.sum(counts)} total counts.')
             
+        return counts            
     
     def template_injector(self, n_sig, seed=None, verbose=None):
         """
@@ -715,21 +735,27 @@ class LiMaStats_allsky:
         rng_inj = np.random.default_rng(seed=seed)
         poisson_n_sig = rng_inj.poisson(lam=n_sig)
         
-        #Injection bins are choice of ON bins (defined by self.template_pdf > self.cutoff)
+        #Injection bins are choice of ON bins (defined by self.template_pdf > self.cutoff) within dec bounds
         #The probability of choice within the ON bins is always including the acceptance, whether template_pdf does or not. 
         mask = (self.template_pdf > self.cutoff)
-        inj_choice = np.arange(hp.nside2npix(self.nside))[mask]
-        inj_probs = self.template_acc_smoothed[mask] / np.sum(self.template_acc_smoothed[mask])
-        self.inj_bins = rng_inj.choice(inj_choice, size=poisson_n_sig, p=inj_probs)
-
+        dec_mask = (self.bin_decs<=np.radians(self.max_dec_deg)) & (self.bin_decs>=np.radians(self.min_dec_deg))
+        
         if verbose:
             print(f'Injecting {n_sig} events in "On" bins according to template+acceptance probabilities with poisson fluctuation ({poisson_n_sig})...')
+        
+        inj_choice = np.arange(hp.nside2npix(self.nside))[mask & dec_mask]
+        inj_probs = self.template_acc_smoothed[mask & dec_mask] / np.sum(self.template_acc_smoothed[mask & dec_mask])
+        self.inj_bins = rng_inj.choice(inj_choice, size=poisson_n_sig, p=inj_probs)
+
         
         #Get unique injection bins and times to inject in each bin
         bin_nums, bin_injs = np.unique(self.inj_bins, return_counts=True)
         
         #Add injections to counts in respective bins
         self.counts[bin_nums] += bin_injs
+        
+        if verbose:
+            print('--> Injections Done.')
                 
         return          
         

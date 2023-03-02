@@ -1,17 +1,8 @@
 #Imports
 import numpy as np
-import scipy as sp
-import healpy as hp
-import histlite as hl
 import csky as cy
-import os
-import gc
-from glob import glob
 
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-
-from modules.binnedtemplate_allsky import LiMaStats_allsky as LiMaStats
+from modules.binnedtemplate_allsky import BinnedTemplateAllSky
 
 import argparse
 
@@ -52,8 +43,6 @@ p.add_argument('--num-trials', type=int, default=1,
                help='Number of trials to run.')
 p.add_argument('--nsig', type=int, default=0,
                help='Number of signal events to inject.')
-p.add_argument('--acc', type=str, default='signal', choices=['signal', 'bg'],
-               help='Acceptance to use (should always be "signal").')
 p.add_argument('--seed', type=int, default=None,
                help='Seed for RNG.')
 p.add_argument('--save-trials', type=str, required=True, 
@@ -63,12 +52,12 @@ p.add_argument('--save-trials', type=str, required=True,
 args = p.parse_args()
 
 #Initiate class object
-lima_bean = LiMaStats(args.data_path, args.sig_path, args.grl_path, is_binned=args.is_binned, savedir=args.savedir, name=args.name, 
+bin_chilln = BinnedTemplateAllSky(args.data_path, args.sig_path, args.grl_path, is_binned=args.is_binned, savedir=args.savedir, name=args.name, 
                      template=args.template_path, gamma=args.gamma, cutoff=args.cutoff, 
                      nside=args.nside, min_dec_deg=args.min_dec_deg, max_dec_deg=args.max_dec_deg, verbose=args.verbose)
 
 #Run trials
-trials = lima_bean.get_many_llrs(num=args.num_trials, n_sig=args.nsig, acc=args.acc, seed=args.seed, verbose=args.verbose)
+trials = bin_chilln.get_many_fits(num=args.num_trials, n_sig=args.nsig, seed=args.seed, verbose=args.verbose)
 
 #Save trials
 cy.utils.ensure_dir(args.save_trials)
