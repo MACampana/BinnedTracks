@@ -120,7 +120,8 @@ class BinnedTemplateAllSky:
         
         self.sig_evs = np.load(sig)
         print(f'Load signal array <-- {sig}')
-        smooth_sig = np.median(self.sig_evs['true_angErr'])
+        weights = self.sig_evs['oneweight'] * self.sig_evs['true_energy']**(-self.gamma)
+        smooth_sig = self.weighted_quantile(self.sig_evs['true_angErr'], weights, 0.5)
         print(f'    Median true angular error: {smooth_sig}')
         
         print(f'Load template <-- {template}')
@@ -163,6 +164,18 @@ class BinnedTemplateAllSky:
         self.get_pdfs()
 
         print('***Setup complete!*** \n')
+        
+    def weighted_quantile(self, data, weights, quantile):
+            ix = np.argsort(data)
+            data = data[ix] # sort data
+            weights = weights[ix] # sort weights
+            csw = np.cumsum(weights)
+            cut = np.sum(weights) * quantile
+            if len(data) == 0:
+                q = 0.0
+            else:
+                q = data[csw >= cut][0]
+            return q
         
     def bin_data(self, data, verbose=None):#, truth=False, seed=None):
         """
