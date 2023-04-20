@@ -120,7 +120,7 @@ def mask_data(data):
 exp_dtype = [('run', int), ('event', int), ('subevent', int),
              ('ra', float), ('dec', float),
              ('azi', float), ('zen', float), ('time', float),
-             ('logE', float), ('angErr', float), ('qtot', float)]
+             ('logE', float), ('angErr', float), ('qtot', float), ('qtot_wdc', float)]
 
 mc_dtype = [('true_ra', float), ('true_dec', float),
             ('true_azi', float), ('true_zen', float),
@@ -131,8 +131,8 @@ run = combined_weighter.get_column('I3EventHeader', 'Run')
 event = combined_weighter.get_column('I3EventHeader', 'Event')
 subevent = combined_weighter.get_column('I3EventHeader', 'SubEvent')
 
-zen = combined_weighter.get_column('MPEFit', 'zenith')
-azi = combined_weighter.get_column('MPEFit', 'azimuth')
+zen = combined_weighter.get_column('SplineMPE', 'zenith')
+azi = combined_weighter.get_column('SplineMPE', 'azimuth')
 
 if assign_time is None:
     time = combined_weighter.get_column('I3EventHeader', 'time_start_mjd')
@@ -141,10 +141,11 @@ if assign_time is None:
 else:
     time = np.full_like(run, assign_time)
     
-logE = np.log10(combined_weighter.get_column('MPEFitMuEX', 'energy'))
-qtot = combined_weighter.get_column('Homogenized_QTot', 'value')
+logE = np.log10(combined_weighter.get_column('SplineMPEMuEXDifferential', 'energy'))
+qtot = combined_weighter.get_column('SRTHVInIcePulses_Qtot', 'value')
+qtot_wdc = combined_weighter.get_column('SRTHVInIcePulses_QtotWithDC', 'value')
 
-angErr = np.sqrt(combined_weighter.get_column('MPEFitCramerRaoParams', 'cramer_rao_theta')**2 + combined_weighter.get_column('MPEFitCramerRaoParams', 'cramer_rao_phi')**2 * np.sin(zen)**2) / np.sqrt(2)
+angErr = np.sqrt(combined_weighter.get_column('MPEFitParaboloidFitParams', 'err1')**2 + combined_weighter.get_column('MPEFitParaboloidFitParams', 'err2')**2) / np.sqrt(2)
 
 trueZen = combined_weighter.get_column('I3MCWeightDict', 'PrimaryNeutrinoZenith')
 trueAzi = combined_weighter.get_column('I3MCWeightDict', 'PrimaryNeutrinoAzimuth')
@@ -167,6 +168,7 @@ a['logE'] = logE
 a['ra'], a['dec'] = astro.dir_to_equa(a['zen'], a['azi'], a['time'])
 a['angErr'] = angErr
 a['qtot'] = qtot
+a['qtot_wdc'] = qtot_wdc
 
 a['true_zen'] = trueZen
 a['true_azi'] = trueAzi

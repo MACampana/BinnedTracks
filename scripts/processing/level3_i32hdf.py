@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 from I3Tray import I3Tray
-from icecube import icetray, hdfwriter, simclasses, recclasses, dataclasses
+from icecube import icetray, hdfwriter, simclasses, recclasses, dataclasses, paraboloid
 
 p = argparse.ArgumentParser(description="Performs i3 -> hdf for simweight-ing",
                             formatter_class=argparse.RawTextHelpFormatter)
@@ -21,11 +21,11 @@ def custom_filter(frame):
         return False
     elif frame['I3EventHeader'].sub_event_stream == 'NullSplit':
         return False
-    elif ('MPEFit' not in frame.keys()) and ('SplineMPE' not in frame.keys()):
+    elif 'SplineMPE' not in frame.keys():
         return False
-    elif not frame['FilterMask']['MuonFilter_13'].condition_passed:
+    elif 'MPEFitParaboloidFitParams' not in frame.keys():
         return False
-    elif np.isnan(frame['MPEFit'].dir.azimuth) or np.isnan(frame['MPEFit'].dir.zenith):
+    elif np.isnan(frame['SplineMPE'].dir.azimuth) or np.isnan(frame['SplineMPE'].dir.zenith):
         return False
     else:
         return True
@@ -38,7 +38,8 @@ tray.Add(
     SubEventStreams=["InIceSplit", "Final"],
     keys=["MCPrimary", 'MCPrimary1', "I3MCWeightDict", 'I3EventHeader', 
           'MPEFit', 'MPEFitMuEX', 'MPEFitCramerRaoParams', 
-          'SplineMPE', 'SplineMPEMuEXDifferential', 'MPEFitParabaloid', 'Homogenized_QTot'],
+          'SplineMPE', 'SplineMPEMuEXDifferential', 'MPEFitParabaloid', 'MPEFitParaboloidFitParams', 
+          'Homogenized_QTot', 'SRTHVInIcePulses_Qtot', 'SRTHVInIcePulses_QtotWithDC'],
     output=args.output,
 )
 tray.AddModule('TrashCan', 'YesWeCan')

@@ -11,7 +11,7 @@ from icecube import dataio, icetray, dataclasses, recclasses, simclasses
 exp_dtype = [('run', int), ('event', int), ('subevent', int),
              ('ra', float), ('dec', float),
              ('azi', float), ('zen', float), ('time', float),
-             ('logE', float), ('angErr', float)]
+             ('logE', float), ('angErr', float), ('qtot', float)]
 
 mc_dtype = [('true_ra', float), ('true_dec', float),
             ('true_azi', float), ('true_zen', float),
@@ -101,7 +101,7 @@ def i3f2npy(path, assign_time, fix_leap=True, MC=False):#, nfiles=None, neventsp
     """
     run, event, subevent = [], [], []
     azi, zen, angErr = [], [], []
-    time, logE = [], []
+    time, logE, qtot = [], [], []
     trueAzi, trueZen, trueE = [], [], []
     #oneweight = []
     angErr = []
@@ -119,6 +119,9 @@ def i3f2npy(path, assign_time, fix_leap=True, MC=False):#, nfiles=None, neventsp
             continue
         
         if 'MPEFitMuEX' not in frame.keys():
+            continue
+            
+        if 'Homogenized_QTot' not in frame.keys():
             continue
             
         if not frame['FilterMask']['MuonFilter_13'].condition_passed:
@@ -140,6 +143,7 @@ def i3f2npy(path, assign_time, fix_leap=True, MC=False):#, nfiles=None, neventsp
         else:
             time.append(assign_time)
         logE.append(np.log10(frame['MPEFitMuEX'].energy))
+        qtot.append(frame['Homogenized_QTot'].value)
         
         angErr.append(np.sqrt(frame['MPEFitCramerRaoParams'].cramer_rao_theta**2 + frame['MPEFitCramerRaoParams'].cramer_rao_phi**2 * np.sin(frame['MPEFit'].dir.zenith)**2) / np.sqrt(2) )
 
@@ -174,6 +178,7 @@ def i3f2npy(path, assign_time, fix_leap=True, MC=False):#, nfiles=None, neventsp
     a['logE'] = logE
     a['ra'], a['dec'] = astro.dir_to_equa(a['zen'], a['azi'], a['time'])
     a['angErr'] = angErr
+    a['qtot'] = qtot
 
     if MC:
         # MC fields
@@ -227,6 +232,7 @@ def hdf2npy(path, assign_time, fix_leap=True, MC=False):#, nfiles=None, neventsp
     else:
         time = np.full_like(run, assign_time)
     logE = np.log10(hdf['MPEFitMuEX']['energy'])
+    qtot = hdf['Homogenized_QTot']['value']
 
     angErr = np.sqrt(hdf['MPEFitCramerRaoParams']['CramerRaoTheta']**2 + hdf['MPEFitCramerRaoParams']['CramerRaoPhi']**2 * np.sin(zen)**2) / np.sqrt(2)
 
@@ -261,6 +267,7 @@ def hdf2npy(path, assign_time, fix_leap=True, MC=False):#, nfiles=None, neventsp
     a['logE'] = logE
     a['ra'], a['dec'] = astro.dir_to_equa(a['zen'], a['azi'], a['time'])
     a['angErr'] = angErr
+    a['qtot'] = qtot
 
     if MC:
         # MC fields
@@ -278,7 +285,7 @@ def hdf2npy(path, assign_time, fix_leap=True, MC=False):#, nfiles=None, neventsp
     hdf.close()
     return a
 
-def mask_exp(data):
+def mask_data(data):
     r""" Mask out events with bad angular errors
 
     Parameters
@@ -291,24 +298,8 @@ def mask_exp(data):
     data : np.ndarray
         Array with masked data events
     """
-    mask = (data["angErr"] < np.radians(30))
+    mask = (data["angErr"] < np.radians(30)) #& (data['logE']>0) & (data['logE']<10)
     return data[mask]
-
-def mask_mc(mc):
-    r""" Mask out events with bad logE
-
-    Parameters
-    ----------
-    MC : np.ndarray
-        Array with MC events
-
-    Returns
-    -------
-    data : np.ndarray
-        Array with masked MC events
-    """
-    mask = (mc['logE'] > 0) 
-    return mc[mask]
 
 def proc(f, time, fix_leap=True, MC=False, hdf=False):#, nfiles=None, neventsperfile=None):
     r""" Perform i3 -> npy
@@ -342,11 +333,7 @@ def proc(f, time, fix_leap=True, MC=False, hdf=False):#, nfiles=None, neventsper
             data = np.concatenate([data, x])
 
     if data.size:
-        data = mask_exp(data)
-
-        if MC:
-            # apply additional mask to Monte Carlo events
-            data = mask_mc(data)
+        data = mask_data(data)
 
     return data
 
