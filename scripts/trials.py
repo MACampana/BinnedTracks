@@ -1,17 +1,11 @@
 #Imports
-import numpy as np
-import scipy as sp
-import healpy as hp
-import histlite as hl
-import csky as cy
 import os
-import gc
-from glob import glob
+os.environ['OMP_NUM_THREADS'] = '3' #limits number of threads used (like by hp.smoothing)
 
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+import numpy as np
+import csky as cy
 
-from modules.binnedtemplate import LiMaStats
+from modules.BinnedTemplate import BinnedTemplateAnalysis
 
 import argparse
 
@@ -40,26 +34,28 @@ p.add_argument('--cutoff', type=float, default=10**(-1.0),
                help='Minimum template value to be considered an On bin.')
 p.add_argument('--nside', type=int, default=128,
                help='Healpy NSIDE for binning.')
-p.add_argument('--num-bands', type=int, default=100,
-               help='Number of evenly spaced sin(Dec) bands for calculating likelihoods.')
 p.add_argument('--min-dec-deg', type=float, default=-80,
                help='Minimum declination in degrees for likelihood calculations.')
 p.add_argument('--max-dec-deg', type=float, default=80,
                help='Maximum declination in degrees for likelihood calculations.')
 p.add_argument('--verbose', action='store_true',
                help='Use for more output.')
-p.add_argument('--where-acc', type=str, default='both', choices=['both', 'temp', 'comb'],
-               help='Where to include signal acceptance.')
+p.add_argument('--qtot', action='store_true',
+               help='Use for binning in log10 qtot rather than energy.')
+p.add_argument('--ebins', type=float, default=None,
+               help='If scalar, number of bins; if sequence, bin edges for log10 energy (or qtot).')
+p.add_argument('--force', action='store_true',
+               help='Use to force binned_data to given nside.')
 
 #Arguments for getting trials:
 p.add_argument('--num-trials', type=int, default=1,
                help='Number of trials to run.')
 p.add_argument('--nsig', type=int, default=0,
                help='Number of signal events to inject.')
-p.add_argument('--acc', type=str, default='signal', choices=['signal', 'bg'],
-               help='Acceptance to use (should always be "signal").')
 p.add_argument('--seed', type=int, default=None,
                help='Seed for RNG.')
+p.add_argument('--poisson', action='store_true',
+               help='Use to inject according to a poisson around nsig.')
 p.add_argument('--save-trials', type=str, required=True, 
                help='Directory to save trials dictionary.')
 
@@ -67,14 +63,14 @@ p.add_argument('--save-trials', type=str, required=True,
 args = p.parse_args()
 
 #Initiate class object
-lima_bean = LiMaStats(args.data_path, args.sig_path, args.grl_path, is_binned=args.is_binned, savedir=args.savedir, name=args.name, 
-                     template=args.template_path, gamma=args.gamma, cutoff=args.cutoff, 
-                     nside=args.nside, num_bands=args.num_bands, min_dec_deg=args.min_dec_deg, max_dec_deg=args.max_dec_deg, verbose=args.verbose, where_acc=args.where_acc)
+bin_chilln = BinnedTemplateAnalysis(args.data_path, args.sig_path, args.grl_path, is_binned=args.is_binned, savedir=args.savedir, name=args.name, 
+                     template=args.template_path, gamma=args.gamma, cutoff=args.cutoff, ebins=args.ebins, qtot=qrgs.qtot, 
+                     nside=args.nside, min_dec_deg=args.min_dec_deg, max_dec_deg=args.max_dec_deg, verbose=args.verbose, force=args.force)
 
 #Run trials
-trials = lima_bean.get_many_llrs(num=args.num_trials, n_sig=args.nsig, acc=args.acc, seed=args.seed, verbose=args.verbose)
+trials = bin_chilln.get_many_fits(num=args.num_trials, n_sig=args.nsig, seed=args.seed, verbose=args.verbose, poisson=args.poisson)
 
 #Save trials
 cy.utils.ensure_dir(args.save_trials)
-save_file = f"{args.save_trials}/trials{args.num_trials}_nsig{args.nsig}_seed{args.seed}_bothAcc_cutoff{args.cutoff}.npy"
+save_file = f"{args.save_trials}/trials{args.num_trials}_nsig{args.nsig}_seed{args.seed}_allsky_cutoff{args.cutoff}.npy"
 np.save(save_file, trials)
