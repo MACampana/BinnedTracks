@@ -40,7 +40,7 @@ for y in ${years[@]}; do
         #THIS IS THE IMPORTANT LINE TO MAKE CHANGES TO!
         #These arguments will work, but you may want/need to change them for your own purposes...
         #(See README and Do_Trials_Sensitivities_Biases.py for description of options)
-        echo "python /data/user/mcampana/analysis/binned_tracks/scripts/processing/level3.py --input ${filelist2[@]} --output /data/user/mcampana/analysis/binned_tracks/data/level3/exp/Level3_${d}${y}_exp.npy --fix-leap " >> ${exec_path}
+        echo "python /data/user/mcampana/analysis/binned_tracks/scripts/processing/level3.py --input ${filelist2[@]} --output /data/user/mcampana/analysis/binned_tracks/data/level3/exp/npy/Level3_${d}${y}_exp.npy --fix-leap " >> ${exec_path}
 
         #Create submission job file with generic parameters and 8GB of RAM requested
         sub_path="${scratch_dir}/job_files/subs/Process_L3Data_${d}${y}_submit.submit"

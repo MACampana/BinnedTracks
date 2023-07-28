@@ -26,11 +26,11 @@ touch ${dag_path}
 for r in ${runs[@]}; do
 
     if [ $r == 21002 ]; then
-        filelist=(/data/sim/IceCube/2016/filtered/level2/neutrino-generator/$r/0000000-0000999/Level2_IC86.2016_NuMu.0$r.0000*.i3*)
-        output="Level2_${r}_000000-000099_sim"
+        filelist=(/data/sim/IceCube/2016/filtered/level2/neutrino-generator/$r/0000000-0000999/Level2_IC86.2016_NuMu.0$r.0001*.i3*)
+        output="Level2_${r}_000100-000199_sim"
     elif [ $r == 21220 ]; then
-        filelist=(/data/sim/IceCube/2016/filtered/level2/neutrino-generator/$r/0000000-0000999/Level2_IC86.2016_NuMu.0$r.000*.i3*)
-        output="Level2_${r}_000000-000999_sim"
+        filelist=(/data/sim/IceCube/2016/filtered/level2/neutrino-generator/$r/0001000-0001999/Level2_IC86.2016_NuMu.0$r.00*.i3*)
+        output="Level2_${r}_001000-001999_sim"
     fi
 
     #Create executable job file

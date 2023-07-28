@@ -23,7 +23,7 @@ dates=( 0101 0102 0103 0104 0105 0106 0107 0108 0109 0110 0111 0112 0113 0114 01
 #---------------------------------------------
     
 #Create DAGMAN file
-dag_path="${scratch_dir}/job_files/dags/Process_L2Data_dagman.dag"
+dag_path="${scratch_dir}/job_files/dags/Process_L2_5Data_dagman.dag"
 touch ${dag_path}
 
 sub="_IT"
@@ -37,22 +37,22 @@ for y in ${years[@]}; do
         done
         
         #Create executable job file
-        exec_path="${scratch_dir}/job_files/execs/Process_L2Data_${d}${y}_exec.sh"
+        exec_path="${scratch_dir}/job_files/execs/Process_L2_5Data_${d}${y}_exec.sh"
         touch ${exec_path}
         echo "#!/bin/sh" >> ${exec_path}
 
         #THIS IS THE IMPORTANT LINE TO MAKE CHANGES TO!
         #These arguments will work, but you may want/need to change them for your own purposes...
         #(See README and Do_Trials_Sensitivities_Biases.py for description of options)
-        echo "python /data/user/mcampana/analysis/binned_tracks/scripts/processing/level2.py --input ${filelist2[@]} --output /data/user/mcampana/analysis/binned_tracks/data/level2/exp/npy/Level2_${d}${y}_exp.npy --fix-leap " >> ${exec_path}
+        echo "python /data/user/mcampana/analysis/binned_tracks/scripts/processing/level2_5.py --input ${filelist2[@]} --output /data/user/mcampana/analysis/binned_tracks/data/level2_5/exp/npy/Level2_5_${d}${y}_exp.npy --fix-leap " >> ${exec_path}
 
         #Create submission job file with generic parameters and 8GB of RAM requested
-        sub_path="${scratch_dir}/job_files/subs/Process_L2Data_${d}${y}_submit.submit"
+        sub_path="${scratch_dir}/job_files/subs/Process_L2_5Data_${d}${y}_submit.submit"
         touch ${sub_path}
         echo "executable = ${exec_path}" >> ${sub_path}
-        echo "output = ${scratch_dir}/outputs/Process_L2Data_${d}${y}.out" >> ${sub_path}
-        echo "error = ${scratch_dir}/errors/Process_L2Data_${d}${y}.err" >> ${sub_path}
-        echo "log = ${scratch_dir}/logs/Process_L2Data_${d}${y}.log" >> ${sub_path}        
+        echo "output = ${scratch_dir}/outputs/Process_L2_5Data_${d}${y}.out" >> ${sub_path}
+        echo "error = ${scratch_dir}/errors/Process_L2_5Data_${d}${y}.err" >> ${sub_path}
+        echo "log = ${scratch_dir}/logs/Process_L2_5Data_${d}${y}.log" >> ${sub_path}        
         echo "getenv = true" >> ${sub_path}
         echo "universe = vanilla" >> ${sub_path}
         echo "notifications = never" >> ${sub_path}
@@ -61,13 +61,13 @@ for y in ${years[@]}; do
         echo "queue 1" >> ${sub_path}
 
         #Add the job to be submitted into the DAGMAN file
-        echo "JOB Process_L2Data_${d}${y} ${sub_path}" >> ${dag_path}
+        echo "JOB Process_L2_5Data_${d}${y} ${sub_path}" >> ${dag_path}
 
     done
 done
 
 #This is the Submit file. After running Make_Cluster_Jobs.sh, run the below shell file to submit the jobs.
-runThis="${scratch_dir}/job_files/SubmitMyJobs_Process_L2Data.sh"
+runThis="${scratch_dir}/job_files/SubmitMyJobs_Process_L2_5Data.sh"
 touch ${runThis}
 echo "#!/bin/sh" >> ${runThis}
 echo "condor_submit_dag -maxjobs 500 ${dag_path}" >> ${runThis}

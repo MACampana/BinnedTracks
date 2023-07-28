@@ -1,7 +1,11 @@
 import argparse
 import numpy as np
-from icecube.icetray import I3Tray
-from icecube import icetray, hdfwriter, simclasses, recclasses, dataclasses, paraboloid
+from icecube.icetray import I3Tray, I3Frame
+
+from icecube.level3_filter_muon.level3_Functions import CleanInputStreams
+from icecube.level3_filter_muon.level2_5_Cuts import DoPrecuts
+
+from icecube import icetray, hdfwriter, simclasses, recclasses, dataclasses
 
 p = argparse.ArgumentParser(description="Performs i3 -> hdf for simweight-ing",
                             formatter_class=argparse.RawTextHelpFormatter)
@@ -14,25 +18,19 @@ args = p.parse_args()
 if args.output[-5:] != ".hdf5":
     raise ValueError("Output file path must end with .hdf5")
 
-files = sorted(args.input)
-files.remove('/data/ana/PointSource/muon_level3/sim/IC86.2016/21220/Level3_IC86.2016_NuMu.021220.001271.i3.zst')
+gcd = '/cvmfs/icecube.opensciencegrid.org/data/GCD/GeoCalibDetectorStatus_AVG_55697-57531_PASS2_SPE_withScaledNoise.i3.gz'
+files = [gcd] + sorted(args.input)
 
 def custom_filter(frame):
     if frame.Stop != icetray.I3Frame.Physics:
         return False
     elif frame['I3EventHeader'].sub_event_stream == 'NullSplit':
         return False
-    elif 'SplineMPE' not in frame.keys():
+    elif ('MPEFit' not in frame.keys()) and ('SplineMPE' not in frame.keys()):
         return False
-    elif 'SplineMPEMuEXDifferential' not in frame.keys():
+    elif not frame['FilterMask']['MuonFilter_13'].condition_passed:
         return False
-    elif 'SRTHVInIcePulses_Qtot' not in frame.keys():
-        return False
-    elif 'SRTHVInIcePulses_QtotWithDC' not in frame.keys():
-        return False
-    elif 'MPEFitParaboloidFitParams' not in frame.keys():
-        return False
-    elif np.isnan(frame['SplineMPE'].dir.azimuth) or np.isnan(frame['SplineMPE'].dir.zenith):
+    elif np.isnan(frame['MPEFit'].dir.azimuth) or np.isnan(frame['MPEFit'].dir.zenith):
         return False
     else:
         return True
@@ -40,13 +38,18 @@ def custom_filter(frame):
 tray = I3Tray()
 tray.Add("I3Reader", FileNameList=files)
 tray.Add(custom_filter)
+tray.AddSegment(CleanInputStreams)
+tray.AddSegment(DoPrecuts,
+        Pulses="SRTInIcePulses",
+        Suffix="",
+        If=lambda frame: True,
+        Track='MPEFit')
 tray.Add(
     hdfwriter.I3HDFWriter,
     SubEventStreams=["InIceSplit", "Final"],
     keys=["MCPrimary", 'MCPrimary1', "I3MCWeightDict", 'I3EventHeader', 
           'MPEFit', 'MPEFitMuEX', 'MPEFitCramerRaoParams', 
-          'SplineMPE', 'SplineMPEMuEXDifferential', 'MPEFitParabaloid', 'MPEFitParaboloidFitParams', 
-          'Homogenized_QTot', 'SRTHVInIcePulses_Qtot', 'SRTHVInIcePulses_QtotWithDC'],
+          'SplineMPE', 'SplineMPEMuEXDifferential', 'MPEFitParabaloid', 'Homogenized_QTot'],
     output=args.output,
 )
 tray.AddModule('TrashCan', 'YesWeCan')

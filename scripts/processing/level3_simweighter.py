@@ -158,6 +158,8 @@ print("Found {} p frames".format(len(run)))
 dtype = exp_dtype + mc_dtype
 a = np.empty(len(run), dtype)
 
+print(len(run), len(zen), len(azi), len(logE), len(trueE))
+
 a['run'] = run
 a['event'] = event
 a['subevent'] = subevent
