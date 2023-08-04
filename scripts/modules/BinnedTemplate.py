@@ -7,7 +7,7 @@ import astropy as ap #Could only import SkyCoords or whatever else I use
 import iminuit
 import healpy as hp
 import histlite as hl
-import csky as cy #could only import ensure_dir if that's all I end up using from csky
+from csky.utils import ensure_dir 
 
 from glob import glob
 
@@ -100,7 +100,7 @@ class BinnedTemplateAnalysis:
         
         self.name = name
         self.savedir = savedir
-        cy.utils.ensure_dir(savedir)
+        ensure_dir(savedir)
         
         self.verbose = verbose
         
@@ -174,21 +174,30 @@ class BinnedTemplateAnalysis:
                                            2.9452, 3.0136, 3.1295])
             else:
                 self.logE_bins = np.array([1.,2.,3.,4.,5.,6.,7.])
+
+            self.n_logE_bins = len(self.logE_bins)+1
+        #If ebins is 1
+        elif (len(ebins)==1) and (ebins[0]==1):
+            self.logE_bins = np.array([0.0, np.inf])
+            self.n_logE_bins = 1
         #If ebins argument is one number, make evenly space bins
         elif (len(ebins) == 1):
             ebins = ebins[0]
             if not is_binned:
-                print(f'Using {ebins}+1 EBins.')
-                
+                print(f'Using {ebins} EBins.')
+            
             if qtot:
-                self.logE_bins = np.linspace(1.5, 3.5, ebins)
+                self.logE_bins = np.linspace(1.5, 3.5, ebins-1)
             else:
-                self.logE_bins = np.linspace(1, 7, ebins)
+                self.logE_bins = np.linspace(1, 7, ebins-1)
+
+            self.n_logE_bins = ebins
         #If ebins is more than one number, use those as the bin edges
         else: #len(ebins) > 1
             if not is_binned:
                 print('Using user-defined EBins.')
             self.logE_bins = np.array(ebins) 
+            self.n_logE_bins = len(self.logE_bins)+1
 
         #Load experimental data (and bin it if it is not already binned)
         if is_binned:
@@ -199,7 +208,9 @@ class BinnedTemplateAnalysis:
             print('Using loaded EBins.')
             self.logE_bins = binned_dict.item()['logE_bins']
             #Get binned data from dictionary
-            self.binned_data = binned_dict.item()['binned_data']
+            self.binned_data = binned_dict.item()['binned_data'] 
+            self.n_logE_bins = len(self.binned_data)
+            
             #Check to see if binned_data nside matches that provided in argument, if not...
             if self.binned_data.shape[1] != hp.nside2npix(self.nside):
                 #...and if force is True, resize the binned data.
@@ -218,15 +229,20 @@ class BinnedTemplateAnalysis:
             self.load(data)
             
         #Get logE bin indices for MC events
-        sig_ebin_inds = np.digitize(self.sig_evs[self.logE_name], self.logE_bins)
+        if self.n_logE_bins > 1:
+            sig_ebin_inds = np.digitize(self.sig_evs[self.logE_name], self.logE_bins)
+        elif self.n_logE_bins == 1:
+            sig_ebin_inds = np.zeros_like(self.sig_evs[self.logE_name], dtype=int)
+        else:
+            raise ValueError("Something is wrong with the number of energy bins!")
         
         #Get median angular error from truth in MC for each ebin (used for smoothing of template)
         #Also get signal acceptance fraction for use in TS and injections
         #Also bin the signal events which is used in PDF making
-        med_sigs = np.zeros(len(self.logE_bins)+1)
-        self.sig_acc_frac = np.zeros(len(self.logE_bins)+1)
-        self.rel_binned_sig = np.zeros((len(self.logE_bins)+1, hp.nside2npix(self.nside)))
-        for e in range(len(self.logE_bins)+1):
+        med_sigs = np.zeros(self.n_logE_bins)
+        self.sig_acc_frac = np.zeros(self.n_logE_bins)
+        self.rel_binned_sig = np.zeros((self.n_logE_bins, hp.nside2npix(self.nside)))
+        for e in range(self.n_logE_bins):
             #Mask events in this ebin
             e_mask = sig_ebin_inds == e
             #Get weighted median
@@ -246,7 +262,7 @@ class BinnedTemplateAnalysis:
         template = np.load(template, allow_pickle=True)         
         self.template = template.copy()
         self.create_template_pdf(med_sigs)
-        
+
         #Get S and B PDFs for likelihood (properly normalized, I hope)
         self.get_pdfs()
 
@@ -332,7 +348,7 @@ class BinnedTemplateAnalysis:
             #If just one file, make it into a list
             file_list = [path]
             
-        self.binned_data = np.zeros((len(self.logE_bins)+1, hp.nside2npix(self.nside)))
+        self.binned_data = np.zeros((self.n_logE_bins, hp.nside2npix(self.nside)))
         #Loop through files    
         for file in file_list:
             #Load the data
@@ -357,8 +373,14 @@ class BinnedTemplateAnalysis:
             #Mask events from GRL
             mask = np.isin(data['run'], self.grl)
             data = data[mask]
-            #Get logE bin indices for each event
-            e_inds = np.digitize(data[self.logE_name], self.logE_bins)
+            
+            #Get logE bin indices for each event (if only one bin, all zeros)
+            if self.n_logE_bins > 1:
+                e_inds = np.digitize(data[self.logE_name], self.logE_bins)
+            elif self.n_logE_bins == 1:
+                e_inds = np.zeros_like(data[self.logE_name], dtype=int)
+            else:
+                raise ValueError("Something is wrong with the number of energy bins!")
 
             if verbose:
                 print(f'    {file} : ')
@@ -366,7 +388,7 @@ class BinnedTemplateAnalysis:
             #Loop through unique energy bin indices
             for e in np.unique(e_inds):
                 if verbose:
-                    print(f'        Energy Bin {e+1}/{len(self.logE_bins)+1}...', end=' ')
+                    print(f'        Energy Bin {e+1}/{self.n_logE_bins}...', end=' ')
                 #Mask events in this energy bin
                 e_mask = (e_inds == e)
                 #bin the events from this file and add to the binned_data (initialized above as all zeros)
@@ -422,7 +444,7 @@ class BinnedTemplateAnalysis:
         #This is really just the declination rows of pixels, but avoiding rows with no background pixels near the poles
         start = 0
         stop = len(np.unique(self.bin_decs))-1
-        for e in range(len(self.logE_bins)+1):
+        for e in range(self.n_logE_bins):
             mask = (self.template_acc_smoothed[e] <= self.cutoff)
             num_bg_pix_per_dec = np.array([np.sum(mask & (self.bin_decs==d)) for d in np.unique(self.bin_decs)])
             start = np.maximum(start, np.nonzero(num_bg_pix_per_dec)[0][0])
@@ -431,10 +453,9 @@ class BinnedTemplateAnalysis:
         #Get edges of dec bands for selecting pixels below
         bin_edges = np.unique(self.bin_decs)[:-1] + np.diff(np.unique(self.bin_decs))/2
         bin_edges = np.r_[-np.pi/2, bin_edges[start:stop], np.pi/2]
-        
-        bg_acc_spline = np.empty(len(self.logE_bins)+1, dtype=object)
-        #loop through ebins
-        for e in range(len(self.logE_bins)+1):
+    
+        bg_acc_spline = np.empty(self.n_logE_bins, dtype=object)
+        for e in range(self.n_logE_bins):
 
             #BG pdf using only "off" pixels as defined by cutoff
             mask = (self.template_acc_smoothed[e] <= self.cutoff)
@@ -442,6 +463,7 @@ class BinnedTemplateAnalysis:
             dOmega_corr = []
             dec_npix = []
             for i in np.arange(len(bin_edges)-1):
+            #for d in np.unique(self.bin_decs):
                 #Get pixel numbers from band of sindec
                 pixels_in_band = hp.query_strip(self.nside, np.pi/2-bin_edges[i+1], np.pi/2-bin_edges[i])
                 #Get boolean array: True if pixel from this sindec band is in signal region
@@ -450,7 +472,7 @@ class BinnedTemplateAnalysis:
                 number_true = np.count_nonzero(bool_array)
                 #Get correction factor: number of pixels in band / number of bg pixels in band
                 corr = float(len(pixels_in_band)/float((len(pixels_in_band)-number_true)))
-
+                
                 dec_npix.append((pixels_in_band))
                 dOmega_corr.append(corr)
 
@@ -468,6 +490,7 @@ class BinnedTemplateAnalysis:
             bg_acc_spline[e] = s_hl.spline
         
         self.bg_acc_spline = bg_acc_spline
+        #print('bg done')
         return
     
     def create_signal_acc_spline(self, skw={}):
@@ -487,11 +510,17 @@ class BinnedTemplateAnalysis:
         skw.setdefault('k', 2)
         skw.setdefault('log', True)
         
-        sig_acc_spline = np.empty(len(self.logE_bins)+1, dtype=object)
+        sig_acc_spline = np.empty(self.n_logE_bins, dtype=object)
         #Get ebin indices for MC events
-        sig_ebin_inds = np.digitize(self.sig_evs[self.logE_name], self.logE_bins)
+        if self.n_logE_bins > 1:
+            sig_ebin_inds = np.digitize(self.sig_evs[self.logE_name], self.logE_bins)
+        elif self.n_logE_bins == 1:
+            sig_ebin_inds = np.zeros_like(self.sig_evs[self.logE_name], dtype=int)
+        else:
+            raise ValueError("Something is wrong with the number of energy bins!")
+            
         #loop through ebins
-        for e in range(len(self.logE_bins)+1):
+        for e in range(self.n_logE_bins):
             #Mask events in this ebin
             sig_ebin_mask = sig_ebin_inds == e
             #Make hist, weighted with relative weights
@@ -504,8 +533,9 @@ class BinnedTemplateAnalysis:
             sig_acc_spline[e] = s_hl.spline
         
         self.signal_acc_spline = sig_acc_spline
+        #print('sig done')
         return  
-  
+    
     def get_acc_from_spline(self, sindec, e, acc):
         """
         Used spline to get acceptance at a give sin(Dec) for a given energy bin index.
@@ -520,7 +550,7 @@ class BinnedTemplateAnalysis:
         Returns: acceptance(s) for provided sin(Dec).
         
         """
-        
+            
         if acc == 'signal':
             try:
                 #Get acceptance from spline using energy bin index and sindec
@@ -568,8 +598,8 @@ class BinnedTemplateAnalysis:
             print('*** Rescaling template to match provided Nside ***')
             template = hp.ud_grade(template, self.nside)
 
-        self.template_acc = np.zeros((len(self.logE_bins)+1, hp.nside2npix(self.nside)))
-        self.template_acc_smoothed = np.zeros((len(self.logE_bins)+1, hp.nside2npix(self.nside)))
+        self.template_acc = np.zeros((self.n_logE_bins, hp.nside2npix(self.nside)))
+        self.template_acc_smoothed = np.zeros((self.n_logE_bins, hp.nside2npix(self.nside)))
         def normalize_pdf(temp, sig=None):
             #This normalization procedure is based on that of csky:
             #Normalize
@@ -598,10 +628,9 @@ class BinnedTemplateAnalysis:
         
         print('Smoothing and normalizing template...')
         #Now for each ebin...
-        for e in range(len(self.logE_bins)+1):
+        for e in range(self.n_logE_bins):
             #Apply signal acceptance 
             template_acc = template * self.get_acc_from_spline(np.sin(self.bin_decs), e, acc='signal')       
-            #template_acc = template * self.binned_sig_acc[e]
             #Do the normalization (and smoothing)
             self.template_acc[e] = normalize_pdf(template_acc, sig=None)
             self.template_acc_smoothed[e] = normalize_pdf(template_acc, sig=smooth_sigs[e])
@@ -631,12 +660,37 @@ class BinnedTemplateAnalysis:
         Returns: TS as calculated in the above equation.
         
         """
-        #Here, N has length of ebins, and is total events in each ebin
+        #Here, N has length of ebins
         N = np.sum(n, axis=1)[:, np.newaxis]
         TS = 2.0 * np.sum( n * np.log( (frac*n_sig / N ) * (p_s / p_b - 1.0) + 1.0 ) )
         
         return TS
 
+#I think the multinomial TS makes more theoretical sense for this purpose, so poisson is unused
+#Both TSs produce the same results
+#    def poisson_TS(self, n_sig, n, p_s, p_b, frac=1.0):
+#        """
+#        This function is used to calculate the poisson TS.
+#        
+#        It is minimized for n_sig in the fitting functions.
+#        
+#        Args:
+#            n_sig: number of (signal) events
+#            
+#            n: array of event counts in pixels (via healpy)
+#            
+#            p_s: array of pixel-wise signal probabilities using signal/template PDf
+#            
+#            p_b: array of pixel-wise background probabilities using background PDF
+#            
+#        Returns: TS as calculated in the above equation.
+#        
+#        """
+#        N = np.sum(n, axis=1)[:, np.newaxis]  
+#        TS = 2.0 * np.sum( (frac*n_sig / N) * (p_b - p_s) + n * np.log( (frac*n_sig / N) * (p_s / p_b - 1.0) + 1.0 ) )
+#        
+#        return TS
+    
     def get_pdfs(self, verbose=None):
         """
         Creates signal and background pdfs used in the test statistic calculation/minimization.
@@ -653,8 +707,8 @@ class BinnedTemplateAnalysis:
         if verbose:
             print('Creating signal and background PDFs for TS calculations...')
             
-        self.p_s = np.zeros((len(self.logE_bins)+1, hp.nside2npix(self.nside)))
-        self.p_b = np.zeros((len(self.logE_bins)+1, hp.nside2npix(self.nside)))
+        self.p_s = np.zeros((self.n_logE_bins, hp.nside2npix(self.nside)))
+        self.p_b = np.zeros((self.n_logE_bins, hp.nside2npix(self.nside)))
 
         #Get mask for signal pixels and dec bounds
         mask = (self.template_acc_smoothed > self.cutoff)
@@ -666,9 +720,8 @@ class BinnedTemplateAnalysis:
         p_s /= np.sum(p_s[:,dec_mask], axis=1)[:, np.newaxis] 
         
         #Background PDF comes straight from the spline
-        p_b = np.array([self.get_acc_from_spline(np.sin(self.bin_decs), b, acc='bg') for b in range(len(self.logE_bins)+1)])
-        #p_b = self.binned_bg_acc.copy()
-        p_b /= np.sum(p_b[:,dec_mask], axis=1)[:, np.newaxis]
+        p_b = np.array([self.get_acc_from_spline(np.sin(self.bin_decs), b, acc='bg') for b in range(self.n_logE_bins)])
+        p_b /= np.sum(p_b[:,dec_mask], axis=1)[:, np.newaxis] 
         
         self.p_s = p_s
         self.p_b = p_b
@@ -727,6 +780,16 @@ class BinnedTemplateAnalysis:
         
         if verbose:
             print('Minimizing -TS...')
+            
+        #Using iminuit.minimize scipy-like interface
+        #res = iminuit.minimize(min_neg_TS, 1, bounds=[(0,np.sum(n))])
+        #fit_ns = res.x
+        #fit_TS = -1.0 * res.minuit.fval
+        
+        #Using scipy
+        #res = sp.optimize.minimize(min_neg_TS, 1, bounds=[(0,np.sum(n))])
+        #fit_ns = res.x
+        #fit_TS = -1.0 * res.fun
         
         #Using iminuit brute force scan to find minimum, then Migrad for better accuracy
         res = iminuit.Minuit(min_neg_TS, 1e2)
@@ -865,7 +928,7 @@ class BinnedTemplateAnalysis:
             print(f'    p = {p}')
             
         return p
-    
+
     def scrambler(self, seed=None, verbose=None):
         """
         Gets a map of "scrambled" counts by sampling from self.bin_count_spline with given sindec
@@ -887,18 +950,17 @@ class BinnedTemplateAnalysis:
         rng_scramble = np.random.default_rng(seed=seed)
         counts = np.zeros_like(self.binned_data)
         #Loop through ebins
-        for e in range(len(self.logE_bins)+1):
+        for e in range(self.n_logE_bins):
             #For background, only consider "off" region
             mask = self.template_acc_smoothed[e] <= self.cutoff
             #Loop through unique pixel decs
             for dec in unique_decs:
                 #Mask pixels in a row of dec
                 dec_mask = (self.bin_decs == dec)
-                #Get number of bg events for normalization, and bg pdf value
                 num_bg_events = np.sum(self.binned_data[e, mask]) * hp.nside2npix(self.nside) / np.sum(mask) 
                 val = self.get_acc_from_spline(np.sin(dec), e, acc='bg') * hp.nside2pixarea(self.nside) * num_bg_events
                 counts[e,dec_mask] = rng_scramble.poisson(lam=val, size=np.sum(dec_mask))
-            
+        
         if verbose:
             print(f'--> Scrambling Done. Scramble contains {np.sum(counts)} total counts.')
             
@@ -928,11 +990,17 @@ class BinnedTemplateAnalysis:
         if verbose:
             print(f'Injecting {n_sig} events in "On" bins according to per-energy-bin template+acceptance probabilities...')
         
-        self.inj_bins = np.empty(len(self.logE_bins)+1, dtype=object)
+        self.inj_bins = np.empty(self.n_logE_bins, dtype=object)
         #Get ebin indicies for MC events
-        sig_ebin_inds = np.digitize(self.sig_evs[self.logE_name], self.logE_bins)
+        if self.n_logE_bins > 1:
+            sig_ebin_inds = np.digitize(self.sig_evs[self.logE_name], self.logE_bins)
+        elif self.n_logE_bins == 1:
+            sig_ebin_inds = np.zeros_like(self.sig_evs[self.logE_name], dtype=int)
+        else:
+            raise ValueError("Something is wrong with the number of energy bins!")
+            
         #Loop through ebins
-        for e in range(len(self.logE_bins)+1):
+        for e in range(self.n_logE_bins):
             #Injection in each ebin is signal fraction * total nsig
             n_inj = np.rint(self.sig_acc_frac[e] * n_sig).astype(int)
             
