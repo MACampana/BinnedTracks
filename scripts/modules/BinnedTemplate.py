@@ -506,7 +506,7 @@ class BinnedTemplateAnalysis:
         
         """
         #Spline Params
-        skw.setdefault('s', .01)
+        skw.setdefault('s', 25)
         skw.setdefault('k', 2)
         skw.setdefault('log', True)
         
