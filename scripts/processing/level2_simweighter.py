@@ -175,7 +175,7 @@ a['true_energy'] = trueE
 a['true_ra'], a['true_dec'] = astro.dir_to_equa(
     a['true_zen'], a['true_azi'], a['time'])
 
-a['oneweight'] = combined_weighter.get_weights(1)
+a['oneweight'] = combined_weighter.get_weights(1) / 2.0 # !!! NOTE !!! Division by two for NuSources convention (nu+nubar)
 
 a['true_angErr'] = angular_distance(a['true_ra'], a['true_dec'], a['ra'], a['dec'])
 
