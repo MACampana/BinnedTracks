@@ -8,6 +8,7 @@ import iminuit
 import healpy as hp
 import histlite as hl
 from csky.utils import ensure_dir 
+import weakref
 
 from glob import glob
 
@@ -19,8 +20,8 @@ class BinnedTemplateAnalysis:
     
     
     """
-    def __init__(self, data, sig, grl, is_binned=False, savedir=None, name='BinnedTemplateAnalysis', 
-                 template=None, gamma=2.7, ebins=None,
+    def __init__(self, data, sig, grl, template, is_binned=False, savedir=None, name='BinnedTemplateAnalysis', 
+                 gamma=2.7, ebins=None,
                  nside=128, min_dec_deg=-80, max_dec_deg=80, qtot=True,
                  verbose=False, force=False, sigsub=True):
         """BinnedTemplateAllSky constructor
@@ -35,7 +36,7 @@ class BinnedTemplateAnalysis:
                                                  ('zen', '<f8'),
                                                  ('time', '<f8'),
                                                  ('logE', '<f8'),
-                                                 ##('angErr', '<f8')])
+                                                 ('angErr', '<f8')])
                                                  
                 OR: Path to numpy array of binned data (in this case, set is_binned=True)
                                      
@@ -50,21 +51,20 @@ class BinnedTemplateAnalysis:
                                                  ('zen', float), 
                                                  ('time', float),
                                                  ('logE', float), 
+                                                 ('angErr', 'float'),
                                                  ('true_angErr', float), 
                                                  ('oneweight', float),     
                                                  ('true_energy', float)]
             
             grl: Path to numpy array with GRL runs
+
+            template: path to template array
                                      
             is_binned: boolean, True if argument data is an array of binned_data, otherwise False (data will be binned)
             
             savedir: path to directory to save binned data. Default: None (don't save)
             
             name: unique name to identify analysis (used in file names when saving)
-            
-            template: path to template array or None
-                TO DO:
-                    * Rescale template nside for differing energy ranges?
                                                             
             gamma: spectral index for detector acceptance and injections. 
                     
@@ -73,8 +73,6 @@ class BinnedTemplateAnalysis:
                 log10(energy) bin edges. If `is_binned` is True, `ebins` will be determined from the loaded data.
 
             nside: integer for healpy nside (Default: 128)
-                TO DO: 
-                    * Allow nside to differ for different energy ranges?
                         
             min_/max_dec_deg: min and max declination in degrees for likelihood calculations.
             
@@ -88,9 +86,6 @@ class BinnedTemplateAnalysis:
             sigsub: boolean, whether to use the signal subtraction likelihood/TS
             
         """
-        
-        if template is None:
-            raise NotImplementedError('Current implementation can only perform template analysis!')
         
         print('Setting up:')
         
@@ -107,11 +102,11 @@ class BinnedTemplateAnalysis:
         self.sigsub = sigsub
         
         #sindec band edges: default here taken from PSTracks in csky
-        self.sindec_bins = np.unique(np.concatenate([
-                             np.linspace(-1, -0.93, 4 + 1),
-                             np.linspace(-0.93, -0.3, 10 + 1),
-                             np.linspace(-0.3, 0.05, 9 + 1),
-                             np.linspace(0.05, 1, 18 + 1) ]) )
+        #self.sindec_bins = np.unique(np.concatenate([
+        #                     np.linspace(-1, -0.93, 4 + 1),
+        #                     np.linspace(-0.93, -0.3, 10 + 1),
+        #                     np.linspace(-0.3, 0.05, 9 + 1),
+        #                     np.linspace(0.05, 1, 18 + 1) ]) )
         
         #Load GRL which should be in format of an array of (good) run numbers
         self.grl = np.load(grl)
@@ -206,7 +201,7 @@ class BinnedTemplateAnalysis:
             #Get binned data from dictionary
             self.binned_data = binned_dict.item()['binned_data'] 
             self.n_logE_bins = len(self.binned_data)
-            
+
             #Check to see if binned_data nside matches that provided in argument, if not...
             if self.binned_data.shape[1] != hp.nside2npix(self.nside):
                 #...and if force is True, resize the binned data.
@@ -365,9 +360,10 @@ class BinnedTemplateAnalysis:
                 new_arr[self.logE_name] = np.log10(data[q_name])
 
                 data = new_arr.copy()
+                del new_arr #free mem
             
             #Mask events from GRL
-            mask = np.isin(data['run'], self.grl)
+            mask = np.isin(data['run'], self.grl['run'])
             data = data[mask]
             
             #Get logE bin indices for each event (if only one bin, all zeros)
@@ -394,7 +390,6 @@ class BinnedTemplateAnalysis:
                     print(' --> Done.')
         
         #Free up memory
-        del new_arr
         del data
         gc.collect()
         
@@ -424,7 +419,7 @@ class BinnedTemplateAnalysis:
         Pieces taken from csky.
         
         TO DO: Is this right?
-        
+
         Args:          
             skw: histlite.Hist.spline_fit kwargs
         
@@ -445,6 +440,8 @@ class BinnedTemplateAnalysis:
         for e in range(self.n_logE_bins):
             #histogram data in sinDec
             h_counts = hl.hist(np.sin(self.bin_decs), weights=self.binned_data[e], bins=np.sin(bin_edges))
+            h_vals = np.where(h_counts.values==0, 1, h_counts.values)
+            h_counts = hl.Hist(values=h_vals, bins=h_counts.bins)
             #Normalize such that integral over solid angle = 1
             h = h_counts.normalize(density=True) / (2*np.pi)
             h = h.gaussian_filter1d(sigma=2) # (test)
@@ -662,7 +659,8 @@ class BinnedTemplateAnalysis:
         N = np.sum(n, axis=1)[:, np.newaxis]
 
         if self.sigsub:
-            TS = 2.0 * np.sum( n * np.log( ( (frac*n_sig) / (N * p_b) ) * (p_s - p_ssub) + 1.0 ) )
+            #TS = 2.0 * np.sum( n * np.log( ( (frac*n_sig) / (N * p_b) ) * (p_s - p_ssub) + 1.0 ) )
+            TS = 2.0 * np.sum( n * np.log( np.maximum( ( (frac*n_sig) / (N * p_b) ) * (p_s - p_ssub) + 1.0 , 1e-12 ) ) ) # (test)
         else:
             TS = 2.0 * np.sum( n * np.log( (frac*n_sig / N ) * (p_s / p_b - 1.0) + 1.0 ) )
         
@@ -747,18 +745,22 @@ class BinnedTemplateAnalysis:
         
         #Mask the dec bounds
         dec_mask = (self.bin_decs<=np.radians(self.max_dec_deg)) & (self.bin_decs>=np.radians(self.min_dec_deg))
+
+        # Attempt to fix memory leak: see https://github.com/icecube/csky/pull/61/commits/dcbd06fc72b096b6a3263ddf10744c4f50dff092
+        # (test)
+        proxy_self = weakref.proxy(self)
     
         #TS calculation uses pixels within dec bounds only (e.g., to exclude poles)
-        n = self.counts[:,dec_mask].copy()
-        p_s = self.p_s[:,dec_mask].copy()
-        p_b = self.p_b[:,dec_mask].copy()
-        p_ssub = self.p_ssub[:,dec_mask].copy()
-        frac = self.sig_acc_frac[:, np.newaxis]
+        n = proxy_self.counts[:,dec_mask].copy()
+        p_s = proxy_self.p_s[:,dec_mask].copy()
+        p_b = proxy_self.p_b[:,dec_mask].copy()
+        p_ssub = proxy_self.p_ssub[:,dec_mask].copy()
+        frac = proxy_self.sig_acc_frac[:, np.newaxis]
         
         #Convenience function is of one variable ns and is the negative of the TS
         #Then, minimize...
         def min_neg_TS(ns):
-            return -1.0 * self.multinomial_TS(ns, n, p_s, p_b, p_ssub, frac=frac)
+            return -1.0 * proxy_self.multinomial_TS(ns, n, p_s, p_b, p_ssub, frac=frac)
         
         if verbose:
             print('Minimizing -TS...')
@@ -769,6 +771,7 @@ class BinnedTemplateAnalysis:
         #Limit ns to between 0 and number of events
         res.limits['ns'] = (0.0, np.sum(self.counts))
         res.scan()
+        #res.scan() # (test) For some reason, scanning twice fixes issue with occasional invalid minima
         res.migrad()
         #res.hesse()
         fit_ns = round(res.values['ns'], 4)
@@ -782,6 +785,8 @@ class BinnedTemplateAnalysis:
             print(f' --> One All Sky Fit Done: ns={fit_ns}, TS={fit_TS}')
             
         print(res)
+        del proxy_self
+        gc.collect()
         return result
     
     def get_many_fits(self, num, n_sig=0, seed=None, verbose=None, poisson=True):
@@ -992,22 +997,32 @@ class BinnedTemplateAnalysis:
             inj_probs = self.template_acc[e, dec_mask]
             inj_bins = rng_inj.choice(inj_choice, size=n_inj, p=inj_probs/np.sum(inj_probs))
             
+            inj_bin_decs = self.bin_decs[inj_bins] # (test)
+            
             inj_evs = np.array([], dtype=self.sig_evs.dtype)
             ps = np.array([])
             #Loop through chosen injection pixels with the number of injections in that pixel
-            bin_sindec_bin_inds = np.digitize(np.sin(self.bin_decs[inj_bins]), self.sindec_bins)
-            for i in np.unique(bin_sindec_bin_inds):
+            #bin_edges = np.unique(self.bin_decs)[:-1] + np.diff(np.unique(self.bin_decs))/2
+            #bin_edges = np.r_[-np.pi/2, bin_edges, np.pi/2]
+            #bin_sindec_bin_inds = np.digitize(np.sin(self.bin_decs[inj_bins]), np.sin(bin_edges))
+            #for i in np.unique(bin_sindec_bin_inds):
+            d, n = np.unique(inj_bin_decs, return_counts=True) # (test)
+            for d, n in zip(d,n): # (test)
                 #mask MC events that are in the same sindec band as the pixel chosen for injection
-                sig_dec_mask = np.digitize(np.sin(sig['true_dec']), self.sindec_bins) == i
+                #sig_dec_mask = np.digitize(np.sin(sig['true_dec']), np.sin(bin_edges)) == i
+                #sig_in_dec = sig[sig_dec_mask]
+                sig_dec_mask = (sig['true_dec'] > d-np.radians(3)) & (sig['true_dec'] < d+np.radians(3)) # (test)
                 sig_in_dec = sig[sig_dec_mask]
                 
                 #pick random events from that sindec band selection with size equal to occurrences (weighted choice)
                 choice_weights = self.sig_relweights[sig_ebin_mask][sig_dec_mask]
-                n = np.sum(bin_sindec_bin_inds==i)
+                #n = np.sum(bin_sindec_bin_inds==i)
+                
                 #At full scale, with enough MC, replace should be set to False (so as to not select the same MC event twice)
                 inj_evs = np.concatenate((inj_evs, rng_inj.choice(sig_in_dec, size=n, replace=False, p=choice_weights/np.sum(choice_weights), shuffle=False)))
                 #Keep track of injection pixels from each dec band
-                ps = np.concatenate((ps,inj_bins[bin_sindec_bin_inds==i]))
+                #ps = np.concatenate((ps,inj_bins[bin_sindec_bin_inds==i]))
+                ps = np.concatenate((ps, inj_bins[self.bin_decs[inj_bins]==d])) # (test)
                 
                 #For pixels in the same sindec band, it doesnt matter which events go to which pixel
                 #    since it is a random assignment. So the events in inj_evs are assigned to the 
