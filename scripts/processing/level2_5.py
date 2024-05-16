@@ -173,7 +173,7 @@ def DoPrecuts(frame):
             Track=frame[Track]
             # Now, make cuts
             PassPreCut=False
-            if AvgDistQ < 150:
+            if (AvgDistQ < 150) or (Qtot > 60):
                 PassPreCut=True
 
             # Upgoing - standard precut

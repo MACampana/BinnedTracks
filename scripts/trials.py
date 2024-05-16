@@ -20,6 +20,8 @@ p.add_argument('--sig-path', type=str, required=True,
                help='Path to numpy array of simulation.')
 p.add_argument('--grl-path', type=str, required=True, 
                help='Path to numpy array of good runs.')
+#p.add_argument('--kde-path', type=str, required=True, 
+#               help='Path to numpy array of KDEs.')
 p.add_argument('--is-binned', action='store_true',
                help='Use if data in data_path is already binned.')
 p.add_argument('--savedir', type=str, default=None,
@@ -42,7 +44,7 @@ p.add_argument('--verbose', action='store_true',
                help='Use for more output.')
 p.add_argument('--qtot', action='store_true',
                help='Use for binning in log10 qtot rather than energy.')
-p.add_argument('--ebins', type=float, default=None,
+p.add_argument('--ebins', type=float, nargs='+', default=None,
                help='If scalar, number of bins; if sequence, bin edges for log10 energy (or qtot).')
 p.add_argument('--force', action='store_true',
                help='Use to force binned_data to given nside.')
@@ -63,14 +65,15 @@ p.add_argument('--save-trials', type=str, required=True,
 args = p.parse_args()
 
 #Initiate class object
-bin_chilln = BinnedTemplateAnalysis(args.data_path, args.sig_path, args.grl_path, is_binned=args.is_binned, savedir=args.savedir, name=args.name, 
-                     template=args.template_path, gamma=args.gamma, cutoff=args.cutoff, ebins=args.ebins, qtot=qrgs.qtot, 
-                     nside=args.nside, min_dec_deg=args.min_dec_deg, max_dec_deg=args.max_dec_deg, verbose=args.verbose, force=args.force)
+bin_chilln = BinnedTemplateAnalysis(args.data_path, args.sig_path, args.grl_path, is_binned=args.is_binned, 
+                                    savedir=args.savedir, name=args.name, 
+                                    template=args.template_path, gamma=args.gamma, cutoff=args.cutoff, ebins=args.ebins, qtot=args.qtot, 
+                                    nside=args.nside, min_dec_deg=args.min_dec_deg, max_dec_deg=args.max_dec_deg, verbose=args.verbose, force=args.force)
 
 #Run trials
 trials = bin_chilln.get_many_fits(num=args.num_trials, n_sig=args.nsig, seed=args.seed, verbose=args.verbose, poisson=args.poisson)
 
 #Save trials
 cy.utils.ensure_dir(args.save_trials)
-save_file = f"{args.save_trials}/trials{args.num_trials}_nsig{args.nsig}_seed{args.seed}_allsky_cutoff{args.cutoff}.npy"
+save_file = f"{args.save_trials}/trials{args.num_trials}_nsig{args.nsig}_seed{args.seed}_cutoff{args.cutoff}.npy"
 np.save(save_file, trials)

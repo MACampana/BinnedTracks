@@ -91,6 +91,90 @@ class BinnedTemplateAnalysis:
             
             
         """
+        '''
+        self.bb_bins = np.array([np.array([-1.        , -0.89950881, -0.83661275, -0.80065442, -0.76553614,
+                  -0.69690706, -0.63707182, -0.44462304, -0.32370584, -0.18437429,
+                  -0.14481433, -0.04738862,  0.03614851,  0.07055893,  0.10370578,
+                   0.14263341,  0.18036763,  0.23877537,  0.32903122,  0.67796469,
+                   0.76397449,  0.81928373,  0.85810175,  0.90456654,  0.95961778,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.78476815, -0.69908404, -0.62853187, -0.32848784,
+                  -0.1782143 , -0.14411293, -0.08989597, -0.03075927,  0.03954887,
+                   0.12793786,  0.22504095,  0.34646798,  0.74268888,  0.82304583,
+                   0.88710902,  0.97455871,   1.])                                 ,
+           np.array([-1.        , -0.94508251, -0.79744124, -0.64653098, -0.33665038,
+                  -0.23981953, -0.17296853, -0.1127156 , -0.05814776,  0.02298234,
+                   0.10693383,  0.21212381,  0.68803068,  0.7595799 ,  0.82960466,
+                   0.87462507,  0.94333963,  1.        ])                         ,
+           np.array([-1.        , -0.93228461, -0.6887116 , -0.30945155, -0.19231385,
+                  -0.02493273,  0.05556296,  0.14551715,  0.29527479,  0.66134755,
+                   0.72700736,  0.83179921,  0.88889625,  1.        ])            ,
+           np.array([-1.        , -0.89587741, -0.63983012, -0.32088205, -0.27587493,
+                  -0.18331951, -0.0625932 ,  0.03519046,  0.17708531,  0.66425052,
+                   0.74350907,  0.84517586,  1.        ])                         ,
+           np.array([-1.        , -0.94980334, -0.89446603, -0.35797063, -0.30623653,
+                  -0.23750648, -0.20005087, -0.14912647, -0.04772366,  0.02935457,
+                   0.14264125,  0.27074083,  0.64923804,  0.73057599,  0.83079406,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.95915644, -0.91785802, -0.42934792, -0.32111846,
+                  -0.23508843, -0.08848357,  0.03313759,  0.23282553,  0.58526565,
+                   0.73127259,  0.81134119,  0.91122624,  1.        ])            ,
+           np.array([-1.        , -0.63988874, -0.44057553, -0.34487885, -0.26602035,
+                  -0.22448619, -0.11700594, -0.06483343,  0.00651613,  0.21425199,
+                   0.55912025,  0.75801123,  0.88280736,  1.        ])            ,
+           np.array([-1.        , -0.80537918, -0.37382054, -0.30461851, -0.2642643 ,
+                  -0.01181373,  0.23229368,  0.58831011,  0.75657851,  0.91848494,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.78862124, -0.42719774, -0.33711707, -0.27909552,
+                  -0.10108909, -0.00173871,  0.23913102,  0.59890677,  0.74766866,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.85109453, -0.43724261, -0.35357553, -0.30242805,
+                  -0.09572638,  0.00568298,  0.14312297,  0.58453204,  0.76307897,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.85375089, -0.49444223, -0.41086568, -0.34493369,
+                  -0.25914617, -0.12793911, -0.03857407,  0.3792026 ,  0.70109617,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.47993628, -0.42031807, -0.35668521, -0.2772424 ,
+                  -0.12123379,  0.062789  ,  0.61076675,  1.        ])            ,
+           np.array([-1.        , -0.65886077, -0.49294887, -0.41700345, -0.38278879,
+                  -0.30697841, -0.14299963, -0.10765568,  0.05474702,  0.41822243,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.69577917, -0.58995407, -0.50162113, -0.44592239,
+                  -0.14051574,  0.0290701 ,  0.40718245,  1.        ])            ,
+           np.array([-1.        , -0.78487765, -0.57440096, -0.52616888, -0.3933832 ,
+                  -0.34047809, -0.03850109,  0.41001694,  1.        ])            ,
+           np.array([-1.        , -0.89003459, -0.67152018, -0.62820324, -0.53483758,
+                  -0.45742703, -0.4173029 , -0.27119512, -0.22923853, -0.15156628,
+                   0.21022644,  1.        ])                                      ,
+           np.array([-1.        , -0.80362332, -0.7466046 , -0.54636915, -0.50492262,
+                  -0.44541832, -0.41016856, -0.31881564, -0.22966573, -0.19571998,
+                  -0.14148578,  0.07246615,  0.51337711,  1.        ])            ,
+           np.array([-1.        , -0.90266999, -0.6508549 , -0.60722661, -0.56719411,
+                  -0.50679383, -0.46906437, -0.43093971, -0.39770393, -0.35257006,
+                  -0.29883854, -0.24346951, -0.19202965, -0.1170732 ,  0.2987159 ,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.82227933, -0.73916067, -0.64192097, -0.60591511,
+                  -0.57344868, -0.49612254, -0.39820569, -0.3463813 , -0.29245966,
+                  -0.25805732, -0.21943134, -0.12267165,  0.24823844,  1.        ]),
+           np.array([-1.        , -0.93314273, -0.82412113, -0.7503662 , -0.68656827,
+                  -0.60980959, -0.55463197, -0.47093148, -0.39804144, -0.35490189,
+                  -0.31054281, -0.26578856, -0.20762202, -0.09619029,  1.        ]),
+           np.array([-1.        , -0.93783505, -0.88733081, -0.79611619, -0.72912984,
+                  -0.68260349, -0.61084009, -0.5376294 , -0.48168417, -0.42919966,
+                  -0.3832681 , -0.33826319, -0.27812385, -0.1796548 ,  0.16011418,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.78947119, -0.68900664, -0.60469798, -0.54282587,
+                  -0.48234702, -0.41529246, -0.34189329, -0.27095458, -0.20294518,
+                  -0.09790813,  1.        ])                                      ,
+           np.array([-1.        , -0.85487801, -0.75778255, -0.66065389, -0.59035808,
+                  -0.52120806, -0.44588417, -0.36064746, -0.276493  , -0.17064716,
+                   1.        ])                                                   ,
+           np.array([-1.        , -0.95070853, -0.86310485, -0.79336687, -0.6910255 ,
+                  -0.63622918, -0.56348131, -0.4964505 , -0.45227271, -0.37778964,
+                  -0.32488907, -0.27234281, -0.18201988,  1.        ])            ],
+          dtype=object)
+        '''
+        
         if template is None:
             raise NotImplementedError('Current implementation can only perform template analysis!')
         elif cutoff is None:
@@ -210,6 +294,15 @@ class BinnedTemplateAnalysis:
             #Get binned data from dictionary
             self.binned_data = binned_dict.item()['binned_data'] 
             self.n_logE_bins = len(self.binned_data)
+
+            ## (test) subset of bins
+            #new_sig_mask = self.sig_evs[self.logE_name]>=binned_dict.item()['logE_bins'][4]
+            #self.sig_evs = self.sig_evs[new_sig_mask]
+            #self.sig_relweights = self.sig_relweights[new_sig_mask]
+            #self.logE_bins = binned_dict.item()['logE_bins'][5:]
+            ##Get binned data from dictionary
+            #self.binned_data = binned_dict.item()['binned_data'][5:] 
+            #self.n_logE_bins = len(self.binned_data)
             
             #Check to see if binned_data nside matches that provided in argument, if not...
             if self.binned_data.shape[1] != hp.nside2npix(self.nside):
@@ -256,6 +349,47 @@ class BinnedTemplateAnalysis:
         self.bin_thetas, self.bin_phis = hp.pix2ang(self.nside, np.arange(hp.nside2npix(self.nside)))
         self.bin_ras = self.bin_phis
         self.bin_decs = np.pi/2.0 - self.bin_thetas
+#=======================================((TEST))===================================================
+        '''
+        if kde is not None: # (test)
+            print(f'Load KDE PDFs <-- {kde}')
+            kde_dict = np.load(kde, allow_pickle=True)
+            self.bg_accs = kde_dict.item()['bg']
+            self.signal_accs = kde_dict.item()['signal']
+
+            #Load template, create versions with acceptance and/or smoothing
+            print(f'Load template <-- {template}')
+            template = np.load(template, allow_pickle=True)         
+            self.template = template.copy()
+            self.create_template_pdf(med_sigs)
+            
+        else:
+            self.create_signal_acc_kde()
+            
+            #Load template, create versions with acceptance and/or smoothing
+            print(f'Load template <-- {template}')
+            template = np.load(template, allow_pickle=True)         
+            self.template = template.copy()
+            self.create_template_pdf(med_sigs)
+            
+            self.create_bg_acc_kde()
+
+            if self.savedir is not None:
+                ensure_dir(f'{self.savedir}/kdes')
+                kde_dict = {'bg': self.bg_accs,
+                            'signal': self.signal_accs}
+                savefile = f'{self.savedir}/kdes/{self.name}.kde_pdfs.nside{self.nside}.npy'
+                i = 0
+                #if save file already exists, append a number to the file name
+                if os.path.exists(savefile):
+                    print('Saved file of chosen name already exists!')
+                    while os.path.exists(savefile):
+                        savefile = f'{self.savedir}/kdes/{self.name}.kde_pdfs_{i}.nside{self.nside}.npy'
+                        i += 1
+                np.save(savefile, kde_dict)
+                print(f'KDE PDF value arrays saved to --> {savefile}')
+        '''
+#=======================================((TEST))===================================================
 
         #Load template, create versions with acceptance and/or smoothing
         print(f'Load template <-- {template}')
@@ -264,6 +398,7 @@ class BinnedTemplateAnalysis:
         self.create_template_pdf(med_sigs)
 
         #Get S and B PDFs for likelihood (properly normalized, I hope)
+        #self.create_bg_acc_without_sindec()
         self.get_pdfs()
 
         print('***Setup complete!*** \n')
@@ -420,7 +555,119 @@ class BinnedTemplateAnalysis:
             print(f'Binned data saved to --> {savefile}')
             
         return
-    
+
+#    def create_scramble(self, path, verbose=None, seed=0, savedir=None):
+#        """
+#        Loads data, scrambles it, and bins it.
+#        
+#        Args:
+#            path: path to directory containing data files or path to a data file
+#            
+#            verbose: True to show more output (Defaults to class's initited value)
+#
+#            seed: For RNG in scrambling.
+#
+#            savedir: directory to save binned scrambles (Default: None, which sets to self.savedir)
+#            
+#        """
+#        if verbose is None:
+#            verbose = self.verbose
+#        if savedir is None:
+#            savedir = self.savedir
+#        ensure_dir(savedir)
+#        #Make sure path is a directory or a file
+#        assert (os.path.isdir(path) or os.path.isfile(path)), f"Expected path to directory or file, got: {path}"
+#        
+#        print(f'Loading, scrambling, and binning data from {path}')
+#        if os.path.isdir(path):
+#            #If path is a directory, make list of numpy files from that directory
+#            files_like = path+'/*.npy'
+#            file_list = sorted(glob(files_like))
+#            
+#        else: #path is one file
+#            #If just one file, make it into a list
+#            file_list = [path]
+#            
+#        ra_rng = np.random.default_rng(seed=seed)
+#        binned_scramble = np.zeros((self.n_logE_bins, hp.nside2npix(self.nside)))
+#        #Loop through files    
+#        for file in file_list:
+#            #Load the data
+#            data = np.load(file)
+#            #If using qtot instead of energy, add the logQtot field to the data array (just like for MC above)
+#            if self.logE_name == 'logQtot':
+#                if 'qtot_wdc' in data.dtype.names:
+#                    q_name = 'qtot_wdc'
+#                else:
+#                    q_name = 'qtot'
+#                    
+#                #If binning data, make the same addition of logQtot field to the data array
+#                #Add log10 of QTot to the sig array for consistency with logE
+#                new_dtype = np.dtype(data.dtype.descr + [(self.logE_name, '<f8')])
+#                new_arr = np.empty(data.shape, dtype=new_dtype)
+#                for n in data.dtype.names:
+#                    new_arr[n] = data[n]
+#                new_arr[self.logE_name] = np.log10(data[q_name])
+#
+#                data = new_arr.copy()
+#            
+#            #Mask events from GRL
+#            mask = np.isin(data['run'], self.grl)
+#            data = data[mask]
+#
+#            #Randomize RAs
+#            data['ra'] = ra_rng.random(size=len(data['ra'])) * 2.0 * np.pi
+#            
+#            #Get logE bin indices for each event (if only one bin, all zeros)
+#            if self.n_logE_bins > 1:
+#                e_inds = np.digitize(data[self.logE_name], self.logE_bins)
+#            elif self.n_logE_bins == 1:
+#                e_inds = np.zeros_like(data[self.logE_name], dtype=int)
+#            else:
+#                raise ValueError("Something is wrong with the number of energy bins!")
+#
+#            if verbose:
+#                print(f'    {file} : ')
+#            
+#            #Loop through unique energy bin indices
+#            for e in np.unique(e_inds):
+#                if verbose:
+#                    print(f'        Energy Bin {e+1}/{self.n_logE_bins}...', end=' ')
+#                #Mask events in this energy bin
+#                e_mask = (e_inds == e)
+#                #bin the events from this file and add to the binned_data (initialized above as all zeros)
+#                binned_scramble[e] = binned_scramble[e] + self.bin_data(data[e_mask])
+#                
+#                if verbose:
+#                    print(' --> Done.')
+#        
+#        #Free up memory
+#        del new_arr
+#        del data
+#        gc.collect()
+#        
+#        print('--> Data Loading Done. \n')
+#        
+#        #If loading and binning data, and if savedir is given, save
+#        if savedir is not None:
+#            binned_dict = {'logE_bins': self.logE_bins,
+#                           'binned_scramble': binned_scramble}
+#            savefile = f'{savedir}/{self.name}.binned_scramble.seed{seed}.nside{self.nside}.npy'
+#            i = 0
+#            #if save file already exists, append a number to the file name
+#            if os.path.exists(savefile):
+#                print('Saved file of chosen name already exists!')
+#                while os.path.exists(savefile):
+#                    if scramble:
+#                        savefile = f'{savedir}/{self.name}.binned_scramble_{i}.seed{seed}.nside{self.nside}.npy'
+#                    else:
+#                        savefile = f'{savedir}/{self.name}.binned_data_{i}.nside{self.nside}.npy'
+#                    i += 1
+#            np.save(savefile, binned_dict)
+#            print(f'Binned scramble saved to --> {savefile}')
+#            
+#        return
+        
     def create_bg_acc_spline(self, skw={}):
         """
         Create detector acceptance spline (*background*, sinDec-dependent).
@@ -436,7 +683,7 @@ class BinnedTemplateAnalysis:
         
         """
         #Spline Params
-        skw.setdefault('s', .01) #smooth
+        skw.setdefault('s', 0.0) #smooth
         skw.setdefault('k', 2) #spline degree
         skw.setdefault('log', True) #fit to log values
         
@@ -455,8 +702,10 @@ class BinnedTemplateAnalysis:
         bin_edges = np.r_[-np.pi/2, bin_edges[start:stop], np.pi/2]
     
         bg_acc_spline = np.empty(self.n_logE_bins, dtype=object)
+        bg_hist = np.empty(self.n_logE_bins, dtype=object) # (test)
         for e in range(self.n_logE_bins):
 
+            #bin_edges = np.arcsin(self.bb_bins[e]) # (test)
             #BG pdf using only "off" pixels as defined by cutoff
             mask = (self.template_acc_smoothed[e] <= self.cutoff)
 
@@ -480,18 +729,71 @@ class BinnedTemplateAnalysis:
             h_counts_nocorr = hl.hist(np.sin(self.bin_decs[mask]), weights=self.binned_data[e, mask], bins=np.sin(bin_edges))
             #Correct hist counts
             counts_corr = h_counts_nocorr.values * np.array(dOmega_corr) #/ np.array(dec_npix)
+            counts_corr = np.clip(counts_corr, a_min=np.min(counts_corr[np.nonzero(counts_corr)]), a_max=None) # (test)
+            #counts_corr = np.where(counts_corr==0, 1, counts_corr) # (test)
             #New hist
             h_counts = hl.Hist(values=counts_corr, bins=h_counts_nocorr.bins)
             #Normalize such that integral over solid angle = 1
             h = h_counts.normalize(density=True) / (2*np.pi)
+            h = h.gaussian_filter1d(sigma=2) # (test)
             #Fit spline          
             s_hl = h.spline_fit(**skw)
 
             bg_acc_spline[e] = s_hl.spline
+            bg_hist[e] = h # (test)
         
         self.bg_acc_spline = bg_acc_spline
+        self.binned_bg_hists = bg_hist # (test)
         #print('bg done')
         return
+        
+    '''
+    def create_bg_acc_without_sindec(self):
+        """
+        testing
+        """
+        #self.bg_perpix_nohist = np.zeros_like(self.binned_data)
+        self.bg_nohist = np.zeros_like(self.binned_data)
+        self.bg_perpix_bydec_nohist = np.zeros((self.n_logE_bins, len(np.unique(self.bin_decs))))
+        for e in range(self.n_logE_bins):
+            bg_mask = self.template_acc_smoothed[e]<=self.cutoff
+            for i,d in enumerate(np.unique(self.bin_decs)):
+                row_mask = self.bin_decs==d
+                row_bg_sum = np.sum(self.binned_data[e,row_mask & bg_mask])
+                n_pix = np.sum(row_mask)
+                n_bg_pix = np.sum(row_mask & bg_mask)
+                if n_bg_pix==0:
+                    row_bg_perpix = 1.0
+                else:
+                    row_bg_perpix = row_bg_sum / n_bg_pix #n bg counts per pix in row ...Maybe should be median?
+                    #row_bg_perpix = np.median(self.binned_data[e,row_mask & bg_mask])
+                    
+                    row_bg_perpix = np.maximum(np.round(row_bg_perpix), 1.0)
+
+                #self.bg_perpix_nohist[e,row_mask] = row_bg_perpix
+                self.bg_perpix_bydec_nohist[e,i] = row_bg_perpix
+                num_bg_events = np.sum(self.binned_data[e, bg_mask]) * hp.nside2npix(self.nside) / np.sum(bg_mask) 
+                self.bg_nohist[e, row_mask] = row_bg_perpix / num_bg_events / hp.nside2pixarea(self.nside)
+
+        return
+    '''
+
+    '''
+    def create_bg_acc_kde(self):
+        """
+        test
+        """
+        print('Creating background PDF with KDE...')
+        self.bg_acc_kde = np.empty(self.n_logE_bins, dtype=object)
+        self.bg_accs = np.zeros((self.n_logE_bins, hp.nside2npix(self.nside)))
+        for e in range(self.n_logE_bins):
+            mask = (self.template_acc_smoothed[e] <= self.cutoff)
+            k = sp.stats.gaussian_kde(np.sin(self.bin_decs[mask]), weights=self.binned_data[e, mask])
+            self.bg_acc_kde[e] = k
+            self.bg_accs[e] = k(np.sin(self.bin_decs))           
+
+        return
+    '''
     
     def create_signal_acc_spline(self, skw={}):
         """
@@ -511,6 +813,7 @@ class BinnedTemplateAnalysis:
         skw.setdefault('log', True)
         
         sig_acc_spline = np.empty(self.n_logE_bins, dtype=object)
+        sig_hist = np.empty(self.n_logE_bins, dtype=object)
         #Get ebin indices for MC events
         if self.n_logE_bins > 1:
             sig_ebin_inds = np.digitize(self.sig_evs[self.logE_name], self.logE_bins)
@@ -518,23 +821,55 @@ class BinnedTemplateAnalysis:
             sig_ebin_inds = np.zeros_like(self.sig_evs[self.logE_name], dtype=int)
         else:
             raise ValueError("Something is wrong with the number of energy bins!")
+
+        bin_edges = np.unique(self.bin_decs)[:-1] + np.diff(np.unique(self.bin_decs))/2
+        bin_edges = np.r_[-np.pi/2, bin_edges, np.pi/2]
             
         #loop through ebins
         for e in range(self.n_logE_bins):
             #Mask events in this ebin
             sig_ebin_mask = sig_ebin_inds == e
             #Make hist, weighted with relative weights
-            h_counts = hl.hist(np.sin(self.sig_evs['true_dec'][sig_ebin_mask]), weights=self.sig_relweights[sig_ebin_mask], bins=self.sindec_bins)
+            h_counts = hl.hist(np.sin(self.sig_evs['true_dec'][sig_ebin_mask]), weights=self.sig_relweights[sig_ebin_mask], bins=np.sin(bin_edges)) # (test)
             #Normalize such that integral over solid angle = 1
             h = h_counts.normalize(density=True) / (2*np.pi)
+            h = h.gaussian_filter1d(sigma=2) # (test)
             #Fit spline
             s_hl = h.spline_fit(**skw)
 
             sig_acc_spline[e] = s_hl.spline
+            sig_hist[e] = h
         
         self.signal_acc_spline = sig_acc_spline
+        self.sig_hists = sig_hist
         #print('sig done')
         return  
+
+    '''
+    def create_signal_acc_kde(self):
+        """
+        test
+        """
+        print('Creating signal PDF with KDE...')
+        if self.n_logE_bins > 1:
+            sig_ebin_inds = np.digitize(self.sig_evs[self.logE_name], self.logE_bins)
+        elif self.n_logE_bins == 1:
+            #sig_ebin_inds = np.zeros_like(self.sig_evs[self.logE_name], dtype=int)
+            sig_ebin_inds = np.digitize(self.sig_evs[self.logE_name], self.logE_bins)
+            sig_ebin_inds = np.where(sig_ebin_inds==1, 0, np.nan)
+        else:
+            raise ValueError("Something is wrong with the number of energy bins!")
+            
+        self.signal_acc_kde = np.empty(self.n_logE_bins, dtype=object)
+        self.signal_accs = np.zeros((self.n_logE_bins, hp.nside2npix(self.nside)))
+        for e in range(self.n_logE_bins):
+            sig_ebin_mask = sig_ebin_inds == e
+            k = sp.stats.gaussian_kde(np.sin(self.sig_evs['true_dec'][sig_ebin_mask]), weights=self.sig_relweights[sig_ebin_mask])
+            self.signal_acc_kde[e] = k
+            self.signal_accs[e] = k(np.sin(self.bin_decs))
+
+        return
+    '''
     
     def get_acc_from_spline(self, sindec, e, acc):
         """
@@ -554,23 +889,29 @@ class BinnedTemplateAnalysis:
         if acc == 'signal':
             try:
                 #Get acceptance from spline using energy bin index and sindec
-                out = np.exp(self.signal_acc_spline[e](sindec))
+                #out = np.exp(self.signal_acc_spline[e](sindec))
+                out = self.sig_hists[e].get_values(sindec) # (test)
+                
             #If the signal_acc_spline has not been created...
             except AttributeError:
                 print('Signal acceptance spline not yet created. Creating now... \n')
                 self.create_signal_acc_spline()
-                out = np.exp(self.signal_acc_spline[e](sindec))
+                #out = np.exp(self.signal_acc_spline[e](sindec))
+                out = self.sig_hists[e].get_values(sindec) # (test)
                 
             return out
         
         #Same for background spline...
         elif acc == 'bg':
             try:
-                out = np.exp(self.bg_acc_spline[e](sindec))
+                #out = np.exp(self.bg_acc_spline[e](sindec))
+                out = self.binned_bg_hists[e].get_values(sindec) # (test)
+                
             except AttributeError:
                 print('Background acceptance spline not yet created. Creating now... \n')
                 self.create_bg_acc_spline()
-                out = np.exp(self.bg_acc_spline[e](sindec))
+                #out = np.exp(self.bg_acc_spline[e](sindec))
+                out = self.binned_bg_hists[e].get_values(sindec) # (test)            
                 
             return out
         
@@ -622,7 +963,7 @@ class BinnedTemplateAnalysis:
             
             #Re-normalize after smoothing and within dec bounds
             dec_mask = (self.bin_decs<=np.radians(self.max_dec_deg)) & (self.bin_decs>=np.radians(self.min_dec_deg))
-            temp_pdf = temp_pdf / ( np.sum(temp_pdf[dec_mask]) * hp.nside2pixarea(self.nside) )
+            temp_pdf = temp_pdf / ( np.sum(temp_pdf[dec_mask]) * hp.nside2pixarea(self.nside) ) # [dec_mask]
 
             return temp_pdf
         
@@ -631,9 +972,14 @@ class BinnedTemplateAnalysis:
         for e in range(self.n_logE_bins):
             #Apply signal acceptance 
             template_acc = template * self.get_acc_from_spline(np.sin(self.bin_decs), e, acc='signal')       
+            #template_acc = template * self.signal_accs[e] # (test)  
+            
             #Do the normalization (and smoothing)
             self.template_acc[e] = normalize_pdf(template_acc, sig=None)
             self.template_acc_smoothed[e] = normalize_pdf(template_acc, sig=smooth_sigs[e])
+            #self.template_acc[e] = template.copy() # (test)
+            #self.template_acc_smoothed[e] = template.copy() # (test)
+            #self.template_acc_smoothed[e] = self.template_acc[e].copy() # (test)
         
         print('--> Template PDF-ization: Done. \n')
         
@@ -717,11 +1063,15 @@ class BinnedTemplateAnalysis:
         #Signal PDF is template with acceptance and smoothing
         #Pixels below the cutoff are set to 0
         p_s = np.where(mask, self.template_acc_smoothed, 0.0)
-        p_s /= np.sum(p_s[:,dec_mask], axis=1)[:, np.newaxis] 
+        p_s /= np.sum(p_s[:,dec_mask], axis=1)[:, np.newaxis] * hp.nside2pixarea(self.nside) # [:,dec_mask]
         
         #Background PDF comes straight from the spline
         p_b = np.array([self.get_acc_from_spline(np.sin(self.bin_decs), b, acc='bg') for b in range(self.n_logE_bins)])
-        p_b /= np.sum(p_b[:,dec_mask], axis=1)[:, np.newaxis] 
+        #p_b = self.bg_accs.copy() # (test)
+        #p_b = np.array([self.bg_nohist[b] for b in range(self.n_logE_bins)]) 
+        #p_b = self.bg_perpix_nohist.copy()
+        #p_b = np.clip(p_b, np.min(p_b[p_b>0]), None)
+        p_b /= np.sum(p_b[:,dec_mask], axis=1)[:, np.newaxis] * hp.nside2pixarea(self.nside) # [:,dec_mask]
         
         self.p_s = p_s
         self.p_b = p_b
@@ -760,9 +1110,9 @@ class BinnedTemplateAnalysis:
         else:
             #If not truth, create a scramble
             self.counts = self.scrambler(seed=seed, verbose=verbose)                
-            if n_sig != 0:
+            #if n_sig != 0:
                 #If n_sig > 0, perform injections (which get added to self.counts)
-                self.template_injector(n_sig=n_sig, seed=seed, verbose=verbose, poisson=poisson)
+            self.template_injector(n_sig=n_sig, seed=seed, verbose=verbose, poisson=poisson)
         
         #Mask the dec bounds
         dec_mask = (self.bin_decs<=np.radians(self.max_dec_deg)) & (self.bin_decs>=np.radians(self.min_dec_deg))
@@ -770,7 +1120,9 @@ class BinnedTemplateAnalysis:
         #TS calculation uses pixels within dec bounds only (e.g., to exclude poles)
         n = self.counts[:,dec_mask].copy()
         p_s = self.p_s[:,dec_mask].copy()
+        #p_s /= np.sum(p_s, axis=1)[:, np.newaxis]
         p_b = self.p_b[:,dec_mask].copy()
+        #p_b /= np.sum(p_b, axis=1)[:, np.newaxis]
         frac = self.sig_acc_frac[:, np.newaxis]
         
         #Convenience function is of one variable ns and is the negative of the TS
@@ -799,8 +1151,8 @@ class BinnedTemplateAnalysis:
         res.scan()
         res.migrad()
         #res.hesse()
-        fit_ns = res.values['ns']
-        fit_TS = -1.0 * res.fval
+        fit_ns = round(res.values['ns'], 4)
+        fit_TS = -1.0 * min_neg_TS(fit_ns)
         self.minuit_result = res
         
         #Save result to a structured array
@@ -954,13 +1306,27 @@ class BinnedTemplateAnalysis:
             #For background, only consider "off" region
             mask = self.template_acc_smoothed[e] <= self.cutoff
             #Loop through unique pixel decs
-            for dec in unique_decs:
+            #for dec in unique_decs:
+            for i,dec in enumerate(unique_decs):
                 #Mask pixels in a row of dec
                 dec_mask = (self.bin_decs == dec)
+                #Get number of bg events in whole sky (for ebin e)
                 num_bg_events = np.sum(self.binned_data[e, mask]) * hp.nside2npix(self.nside) / np.sum(mask) 
-                val = self.get_acc_from_spline(np.sin(dec), e, acc='bg') * hp.nside2pixarea(self.nside) * num_bg_events
+                #Get per pixel bg events for dec
+                val = self.get_acc_from_spline(np.sin(dec), e, acc='bg') * num_bg_events * hp.nside2pixarea(self.nside) 
+                #val = self.bg_perpix_bydec_nohist[e,i]
+                
+                #uvals, uinds = np.unique(self.bg_accs[e], return_index=True)
+                #ordered_uvals = self.bg_accs[e].copy()[np.sort(uinds)]
+                #val = ordered_uvals[np.argwhere(np.unique(self.bin_decs)[::-1] == dec)[0,0]]
+                #val = val * num_bg_events * hp.nside2pixarea(self.nside) # (test)
+                
+                #Poisson sample around val in this dec
                 counts[e,dec_mask] = rng_scramble.poisson(lam=val, size=np.sum(dec_mask))
-        
+                
+            #Adjust so each ebin has sum(counts) ~= sum(binned_data)
+            #counts[e] = np.around(counts[e] * np.sum(self.binned_data[e]) / np.sum(counts[e]))
+            
         if verbose:
             print(f'--> Scrambling Done. Scramble contains {np.sum(counts)} total counts.')
             

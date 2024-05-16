@@ -24,7 +24,14 @@ dag_path="${scratch_dir}/job_files/dags/Process_L2Sim_dagman.dag"
 touch ${dag_path}
 
 for r in ${runs[@]}; do
-    filelist=(/data/sim/IceCube/2016/filtered/level2/neutrino-generator/$r/0000000-0000999/Level2_IC86.2016_NuMu.0$r.0000*.i3*)
+
+    if [ $r == 21002 ]; then
+        filelist=(/data/sim/IceCube/2016/filtered/level2/neutrino-generator/$r/0000000-0000999/Level2_IC86.2016_NuMu.0$r.0001*.i3*)
+        output="Level2_${r}_000100-000199_sim"
+    elif [ $r == 21220 ]; then
+        filelist=(/data/sim/IceCube/2016/filtered/level2/neutrino-generator/$r/0001000-0001999/Level2_IC86.2016_NuMu.0$r.00*.i3*)
+        output="Level2_${r}_001000-001999_sim"
+    fi
 
     #Create executable job file
     exec_path="${scratch_dir}/job_files/execs/Process_L2Sim_${r}_exec.sh"
@@ -34,7 +41,7 @@ for r in ${runs[@]}; do
     #THIS IS THE IMPORTANT LINE TO MAKE CHANGES TO!
     #These arguments will work, but you may want/need to change them for your own purposes...
     #(See README and Do_Trials_Sensitivities_Biases.py for description of options)
-    echo "python /data/user/mcampana/analysis/binned_tracks/scripts/processing/i32hdf.py --input ${filelist[@]} --output /data/user/mcampana/analysis/binned_tracks/data/level2/sim/hdf/Level2_${r}_000000-000999_sim.hdf5" >> ${exec_path}
+    echo "python /data/user/mcampana/analysis/binned_tracks/scripts/processing/i32hdf.py --input ${filelist[@]} --output /data/user/mcampana/analysis/binned_tracks/data/level2/sim/hdf/${output}.hdf5" >> ${exec_path}
 
     #Create submission job file with generic parameters and 8GB of RAM requested
     sub_path="${scratch_dir}/job_files/subs/Process_L2Sim_${r}_submit.submit"

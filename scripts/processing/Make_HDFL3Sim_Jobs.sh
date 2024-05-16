@@ -16,7 +16,7 @@ mkdir "${scratch_dir}/job_files/subs/"
 
 mkdir "${scratch_dir}/job_files/dags/"
 
-runs=( 21220 )
+runs=( 21002 21220 )
 #---------------------------------------------
 
 #Create DAGMAN file
@@ -25,11 +25,13 @@ touch ${dag_path}
 
 for r in ${runs[@]}; do
     if [ $r == 21002 ]; then
-        filelist=(/data/ana/PointSource/muon_level3/sim/IC86.2016/$r/Level3_IC86.2016_NuMu.0$r.000[0-1]*.i3*)
-        output="Level3_${r}_000000-000199_sim"
+        filelist=(/data/ana/PointSource/muon_level3/sim/IC86.2016/$r/Level3_IC86.2016_NuMu.0$r.000*.i3*)
+        output="Level3_${r}_000000-000999_sim_${#filelist[@]}files"
+        echo ${#filelist[@]}
     elif [ $r == 21220 ]; then
-        filelist=(/data/ana/PointSource/muon_level3/sim/IC86.2016/$r/Level3_IC86.2016_NuMu.0$r.00[0-1]*.i3*)
-        output="Level3_${r}_000000-001999_sim"
+        filelist=(/data/ana/PointSource/muon_level3/sim/IC86.2016/$r/Level3_IC86.2016_NuMu.0$r.00[0-9]*.i3*)
+        output="Level3_${r}_000000-009999_sim_${#filelist[@]}files"
+        echo ${#filelist[@]}
     fi
 
     #Create executable job file

@@ -1,6 +1,6 @@
 import argparse
 import numpy as np
-from I3Tray import I3Tray
+from icecube.icetray import I3Tray
 from icecube import icetray, hdfwriter, simclasses, recclasses, dataclasses
 
 p = argparse.ArgumentParser(description="Performs i3 -> hdf for simweight-ing",
@@ -15,6 +15,10 @@ if args.output[-5:] != ".hdf5":
     raise ValueError("Output file path must end with .hdf5")
 
 files = sorted(args.input)
+if '/data/ana/PointSource/muon_level3/sim/IC86.2016/21220/Level3_IC86.2016_NuMu.021220.001271.i3.zst' in files:
+    print('Removing problem files from input list...')
+    files.remove('/data/ana/PointSource/muon_level3/sim/IC86.2016/21220/Level3_IC86.2016_NuMu.021220.001271.i3.zst')
+    
 
 def custom_filter(frame):
     if frame.Stop != icetray.I3Frame.Physics:

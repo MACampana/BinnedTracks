@@ -100,7 +100,7 @@ def angular_distance(lon1,lat1,lon2,lat2):
         s1*s2+c1*c2*cd
         )
 
-def mask_exp(data):
+def mask_data(data):
     r""" Mask out events with bad angular errors
 
     Parameters
@@ -113,30 +113,14 @@ def mask_exp(data):
     data : np.ndarray
         Array with masked data events
     """
-    mask = (data["angErr"] < np.radians(30))
+    mask = (data["angErr"] < np.radians(30)) #& (data['logE']>0) & (data['logE']<10)
     return data[mask]
-
-def mask_mc(mc):
-    r""" Mask out events with bad logE
-
-    Parameters
-    ----------
-    MC : np.ndarray
-        Array with MC events
-
-    Returns
-    -------
-    data : np.ndarray
-        Array with masked MC events
-    """
-    mask = (mc['logE'] > 0) 
-    return mc[mask]
 
 #dtypes for Numpy array
 exp_dtype = [('run', int), ('event', int), ('subevent', int),
              ('ra', float), ('dec', float),
              ('azi', float), ('zen', float), ('time', float),
-             ('logE', float), ('angErr', float)]
+             ('logE', float), ('angErr', float), ('qtot', float)]
 
 mc_dtype = [('true_ra', float), ('true_dec', float),
             ('true_azi', float), ('true_zen', float),
@@ -158,6 +142,7 @@ else:
     time = np.full_like(run, assign_time)
     
 logE = np.log10(combined_weighter.get_column('MPEFitMuEX', 'energy'))
+qtot = combined_weighter.get_column('Homogenized_QTot', 'value')
 
 angErr = np.sqrt(combined_weighter.get_column('MPEFitCramerRaoParams', 'cramer_rao_theta')**2 + combined_weighter.get_column('MPEFitCramerRaoParams', 'cramer_rao_phi')**2 * np.sin(zen)**2) / np.sqrt(2)
 
@@ -181,6 +166,7 @@ a['time'] = time
 a['logE'] = logE
 a['ra'], a['dec'] = astro.dir_to_equa(a['zen'], a['azi'], a['time'])
 a['angErr'] = angErr
+a['qtot'] = qtot
 
 a['true_zen'] = trueZen
 a['true_azi'] = trueAzi
@@ -189,15 +175,14 @@ a['true_energy'] = trueE
 a['true_ra'], a['true_dec'] = astro.dir_to_equa(
     a['true_zen'], a['true_azi'], a['time'])
 
-a['oneweight'] = combined_weighter.get_weights(1)
+a['oneweight'] = combined_weighter.get_weights(1) / 2.0 # !!! NOTE !!! Division by two for NuSources convention (nu+nubar)
 
 a['true_angErr'] = angular_distance(a['true_ra'], a['true_dec'], a['ra'], a['dec'])
 
 #Cuts
 data = a
 if data.size:
-    data = mask_exp(data)
-    data = mask_mc(data)
+    data = mask_data(data)
     
 print("Total events found in final array: {}".format(len(data)))
 

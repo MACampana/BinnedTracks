@@ -17,30 +17,37 @@ mkdir "${scratch_dir}/job_files/subs/"
 mkdir "${scratch_dir}/job_files/dags/"
 #---------------------------------------------
 
-#Create DAGMAN file
-dag_path="${scratch_dir}/job_files/dags/BinnedTrials_dagman.dag"
-touch ${dag_path}
-
 #Top Level
-ana_type="allsky_ebins"
+num_bins="50"
+ana_type="10yr_50EqStatsBins_DirectHistBGSig_GaussFilter"
 level="3"
 name="Fermi_pi0_${ana_type}_level${level}"
 
-#Script Args
-data_path="${base_dir}/data/level${level}/binned/Level${level}_2020.binned_data.npy"
-sig_path="${base_dir}/data/level${level}/sim/npy/Level${level}_sim.npy"
-grl_path="${base_dir}/GRL.npy"
-savedir="${base_dir}/data/level${level}/binned"
-template_path="${base_dir}/templates/Fermi-LAT_pi0_map.npy"
-
-gamma="2.5"
-nside="128"
+#Module Args
+gamma="2.7"
+nside="32"
 cutoff="0.1"
 min_dec_deg="-80"
 max_dec_deg="80"
+
 num_trials="100"
 
-nsigs=( 0 1000 2000 3000 4000 5000 )
+#data_path="${base_dir}/data/level${level}/binned/Level${level}_10yr_${num_bins}bins.binned_data.nside${nside}.npy"
+data_path="${base_dir}/data/level${level}/binned/Level${level}_10yr_${num_bins}EqStatsBins.binned_data.nside${nside}.npy"
+#data_path="${base_dir}/data/level${level}/binned/2020/Level${level}_2020_${num_bins}bins.binned_data.nside${nside}.npy"
+#data_path="${base_dir}/test/sin_binned_data_25bins.nside32.npy"
+sig_path="${base_dir}/data/level${level}/sim/npy/Level${level}_sim_NuNubarWeights.npy"
+grl_path="${base_dir}/GRL.npy"
+savedir="${base_dir}/data/level${level}/binned"
+template_path="${base_dir}/templates/Fermi-LAT_pi0_map.npy"
+#template_path="${base_dir}/test/templates/OnePix32.npy"
+#kde_path="${base_dir}/data/level${level}/binned/kdes/Level3_10yr_25bins.kde_pdfs_0.nside32.npy"
+
+#Create DAGMAN file
+dag_path="${scratch_dir}/job_files/dags/BinnedTrials_${ana_type}_dagman.dag"
+touch ${dag_path}
+
+nsigs=( 15000 )
 for nsig in ${nsigs[@]}; do
 
     seeds=({0..99..1})
@@ -52,13 +59,12 @@ for nsig in ${nsigs[@]}; do
 
 
         if [[ ${nsig} == "0" ]]; then
-            save_trials_dir="${base_dir}/trials/level${level}/bkg/${ana_type}/cutoff/${cutoff}/gamma/${gamma}"
+            save_trials_dir="${base_dir}/trials/level${level}/${ana_type}/bkg/nside/${nside}/cutoff/${cutoff}/gamma/${gamma}"
         else
-            save_trials_dir="${base_dir}/trials/level${level}/sig/${ana_type}/cutoff/${cutoff}/gamma/${gamma}/nsig/${nsig}"
+            save_trials_dir="${base_dir}/trials/level${level}/${ana_type}/sig/nside/${nside}/cutoff/${cutoff}/gamma/${gamma}/nsig/${nsig}"
         fi
 
-        echo "python ${base_dir}/scripts/trials.py --data-path ${data_path} --is-binned --sig-path ${sig_path} --grl-path ${grl_path} --savedir ${savedir} --name ${name} --template-path ${template_path} --gamma ${gamma} --cutoff ${cutoff} --nside ${nside} --min-dec-deg ${min_dec_deg} --max-dec-deg ${max_dec_deg} --verbose --num-trials ${num_trials} --nsig ${nsig} --seed ${s} --save-trials ${save_trials_dir} --qtot --force --ebins None" >> ${exec_path}
-
+        echo "python ${base_dir}/scripts/trials.py --data-path ${data_path} --is-binned --sig-path ${sig_path} --grl-path ${grl_path} --savedir ${savedir} --name ${name} --template-path ${template_path} --gamma ${gamma} --cutoff ${cutoff} --nside ${nside} --min-dec-deg ${min_dec_deg} --max-dec-deg ${max_dec_deg} --verbose --num-trials ${num_trials} --nsig ${nsig} --seed ${s} --save-trials ${save_trials_dir} --qtot --force --poisson " >> ${exec_path}
 
         #Create submission job file with generic parameters and 8GB of RAM requested
         sub_path="${scratch_dir}/job_files/subs/BinnedTrials_${ana_type}_${nsig}_${s}_submit.submit"
@@ -71,7 +77,7 @@ for nsig in ${nsigs[@]}; do
         echo "universe = vanilla" >> ${sub_path}
         echo "notifications = never" >> ${sub_path}
         echo "should_transfer_files = YES" >> ${sub_path}
-        echo "request_memory = 4000" >> ${sub_path}
+        echo "request_memory = 6000" >> ${sub_path}
         echo "queue 1" >> ${sub_path}
 
         #Add the job to be submitted into the DAGMAN file
@@ -81,7 +87,7 @@ for nsig in ${nsigs[@]}; do
 done
 
 #Below is the Submit file. After running this script, run the below shell file to submit the jobs.
-runThis="${scratch_dir}/job_files/SubmitMyJobs_BinnedTrials.sh"
+runThis="${scratch_dir}/job_files/SubmitMyJobs_BinnedTrials_${ana_type}.sh"
 touch ${runThis}
 echo "#!/bin/sh" >> ${runThis}
 echo "condor_submit_dag -maxjobs 500 ${dag_path}" >> ${runThis}

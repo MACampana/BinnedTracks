@@ -15,7 +15,12 @@ if args.output[-5:] != ".hdf5":
     raise ValueError("Output file path must end with .hdf5")
 
 files = sorted(args.input)
-files.remove('/data/ana/PointSource/muon_level3/sim/IC86.2016/21220/Level3_IC86.2016_NuMu.021220.001271.i3.zst')
+try:
+    print('Removing problem files from input list...')
+    files.remove('/data/ana/PointSource/muon_level3/sim/IC86.2016/21220/Level3_IC86.2016_NuMu.021220.001271.i3.zst')
+except ValueError:
+    print('Problem files not found in input list...continuing...')
+    pass
 
 def custom_filter(frame):
     if frame.Stop != icetray.I3Frame.Physics:

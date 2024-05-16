@@ -604,8 +604,8 @@ class BinnedTemplateAnalysis:
             template_acc = template * self.get_acc_from_spline(np.sin(self.bin_decs), e, acc='signal')                   
             #Do the normalization (and smoothing)
             self.template_acc[e] = normalize_pdf(template_acc, sig=None)
-            self.template_acc_smoothed[e] = normalize_pdf(template_acc, sig=smooth_sigs[e])
-            #self.template_acc_smoothed[e] = self.template_acc[e].copy() # (test)
+            #self.template_acc_smoothed[e] = normalize_pdf(template_acc, sig=smooth_sigs[e])
+            self.template_acc_smoothed[e] = self.template_acc[e].copy() # (test)
         
         print('--> Template PDF-ization: Done. \n')
         
@@ -775,7 +775,7 @@ class BinnedTemplateAnalysis:
         res.migrad()
         #res.hesse()
         fit_ns = round(res.values['ns'], 4)
-        fit_TS = -1.0 * min_neg_TS(fit_ns)
+        fit_TS = round(-1.0 * min_neg_TS(fit_ns), 4)
         self.minuit_result = res
         
         #Save result to a structured array
@@ -1031,25 +1031,29 @@ class BinnedTemplateAnalysis:
                 
             ps = ps.astype(int)
 
-            #Get shift polar angle and spherical distance between chosen events and the respective injection pixels
-            true_ev_coord = ap.coordinates.SkyCoord(inj_evs['true_ra'], inj_evs['true_dec'], unit='rad', frame='icrs')
-            true_bin_coord = ap.coordinates.SkyCoord(hp.pix2ang(self.nside, ps)[1], np.pi/2-hp.pix2ang(self.nside, ps)[0], unit='rad', frame='icrs')
-            pos_angle = true_ev_coord.position_angle(true_bin_coord).radian
-            sep = true_ev_coord.separation(true_bin_coord).radian
+            ##Get shift polar angle and spherical distance between chosen events and the respective injection pixels
+            #true_ev_coord = ap.coordinates.SkyCoord(inj_evs['true_ra'], inj_evs['true_dec'], unit='rad', frame='icrs')
+            #true_bin_coord = ap.coordinates.SkyCoord(hp.pix2ang(self.nside, ps)[1], np.pi/2-hp.pix2ang(self.nside, ps)[0], unit='rad', frame='icrs')
+            #pos_angle = true_ev_coord.position_angle(true_bin_coord).radian
+            #sep = true_ev_coord.separation(true_bin_coord).radian
 
-            #Move the events reco direction the same amount
-            start_coord = ap.coordinates.SkyCoord(inj_evs['ra'], inj_evs['dec'], unit='rad', frame='icrs')
-            stop_coord = start_coord.directional_offset_by(pos_angle * ap.units.rad, sep * ap.units.rad)
-            inj_ra, inj_dec = stop_coord.ra.radian, stop_coord.dec.radian
+            ##Move the events reco direction the same amount
+            #start_coord = ap.coordinates.SkyCoord(inj_evs['ra'], inj_evs['dec'], unit='rad', frame='icrs')
+            #stop_coord = start_coord.directional_offset_by(pos_angle * ap.units.rad, sep * ap.units.rad)
+            #inj_ra, inj_dec = stop_coord.ra.radian, stop_coord.dec.radian
                 
-            #Actually inject the events in the pixel corresponding to the moved reco direction
-            reco_inj_bins = hp.ang2pix(self.nside, np.pi/2-inj_dec, inj_ra)
-            #Get unique injection pixels and their number of occurrences 
-            reco_bin_nums, reco_bin_injs = np.unique(reco_inj_bins, return_counts=True)
-            #Increase counts of injection pixels by their number of occurrences
-            self.counts[e,reco_bin_nums] += reco_bin_injs                
+            ##Actually inject the events in the pixel corresponding to the moved reco direction
+            #reco_inj_bins = hp.ang2pix(self.nside, np.pi/2-inj_dec, inj_ra)
+            ##Get unique injection pixels and their number of occurrences 
+            #reco_bin_nums, reco_bin_injs = np.unique(reco_inj_bins, return_counts=True)
+            ##Increase counts of injection pixels by their number of occurrences
+            #self.counts[e,reco_bin_nums] += reco_bin_injs                
+
+            u_ps, c_ps = np.unique(ps, return_counts=True) # (test)
+            self.counts[e, u_ps] += c_ps # (test)
             
-            self.inj_bins[e] = reco_inj_bins
+            #self.inj_bins[e] = reco_inj_bins
+            self.inj_bins[e] = ps # (test)
         
         if verbose:
             print('--> Injections Done.')

@@ -18,10 +18,10 @@ mkdir "${scratch_dir}/job_files/dags/"
 #---------------------------------------------
 
 #Top Level
-num_bins="50"
-ana_type="10yr_50EqStatsBins_DirectHistBGSig_GaussFilter_OnePixNoSmear_SigSub"
+num_bins="100"
+ana_type="IC862011-2022_${num_bins}EqStatsBins_NoAngErrEver"
 level="3"
-name="Fermi_pi0_${ana_type}_level${level}"
+name="Fermi_pi0_level${level}_${ana_type}"
 
 #Module Args
 gamma="2.7"
@@ -31,22 +31,18 @@ max_dec_deg="80"
 
 num_trials="100"
 
-#data_path="${base_dir}/data/level${level}/binned/Level${level}_10yr_${num_bins}bins.binned_data.nside${nside}.npy"
-data_path="${base_dir}/data/level${level}/binned/Level${level}_10yr_${num_bins}EqStatsBins.binned_data.nside${nside}.npy"
-#data_path="${base_dir}/data/level${level}/binned/2020/Level${level}_2020_${num_bins}bins.binned_data.nside${nside}.npy"
-#data_path="${base_dir}/test/sin_binned_data_25bins.nside32.npy"
+data_path="${base_dir}/data/level${level}/binned/Level${level}pass2_IC86_2011-2022_${num_bins}EqStatsBins.binned_data.nside${nside}.npy"
 sig_path="${base_dir}/data/level${level}/sim/npy/Level${level}_sim_NuNubarWeights.npy"
-grl_path="${base_dir}/GRL.npy"
+grl_path="${base_dir}/GRL_IC862011-2022.npy"
 savedir="${base_dir}/data/level${level}/binned"
-#template_path="${base_dir}/templates/Fermi-LAT_pi0_map.npy"
-template_path="${base_dir}/test/templates/OnePix32.npy"
-#kde_path="${base_dir}/data/level${level}/binned/kdes/Level3_10yr_25bins.kde_pdfs_0.nside32.npy"
+template_path="${base_dir}/templates/Fermi-LAT_pi0_map.npy"
+#template_path="${base_dir}/test/templates/OnePix32.npy"
 
 #Create DAGMAN file
 dag_path="${scratch_dir}/job_files/dags/BinnedTrials_${ana_type}_dagman.dag"
 touch ${dag_path}
 
-nsigs=( 0 3000 )
+nsigs=( 0 3000 6000 10000 )
 for nsig in ${nsigs[@]}; do
 
     seeds=({0..99..1})
@@ -76,7 +72,7 @@ for nsig in ${nsigs[@]}; do
         echo "universe = vanilla" >> ${sub_path}
         echo "notifications = never" >> ${sub_path}
         echo "should_transfer_files = YES" >> ${sub_path}
-        echo "request_memory = 6000" >> ${sub_path}
+        echo "request_memory = 8000" >> ${sub_path}
         echo "queue 1" >> ${sub_path}
 
         #Add the job to be submitted into the DAGMAN file
