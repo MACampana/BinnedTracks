@@ -1,3 +1,9 @@
+# This script defines the class for performing a binned max likelihood analysis of a template source hypothesis
+# 
+# Note from author: I tried to comment things pretty well, but do note that the docustrings are incomplete 
+#                   and not standardized...sorry!
+#
+
 #Imports
 import os, sys, gc
 os.environ['OMP_NUM_THREADS'] = '3' #limits number of threads used (like by hp.smoothing)
